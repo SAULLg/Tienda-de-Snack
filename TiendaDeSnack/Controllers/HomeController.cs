@@ -18,6 +18,28 @@ public class HomeController : Controller
         return View();
     }
 
+    // --- ¡NUEVOS MÉTODOS AÑADIDOS! ---
+
+    public IActionResult Menu()
+    {
+        // Busca y muestra el archivo Views/Home/Menu.cshtml
+        return View();
+    }
+
+    public IActionResult Pedidos()
+    {
+        // Busca y muestra el archivo Views/Home/Pedidos.cshtml
+        return View();
+    }
+
+    public IActionResult Resenas()
+    {
+        // Busca y muestra el archivo Views/Home/Resenas.cshtml
+        return View();
+    }
+
+    // ------------------------------------
+
     public IActionResult Privacy()
     {
         return View();
