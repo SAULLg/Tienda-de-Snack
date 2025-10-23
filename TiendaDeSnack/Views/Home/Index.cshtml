@@ -1,5 +1,6 @@
 ﻿@{
     ViewData["Title"] = "Inicio";
+    var usuario = ViewBag.Usuario as string;
 }
 
 <div class="home-page-content">
@@ -7,8 +8,15 @@
         <div class="hero-text-container">
             <h1 class="snack-title">SNACK JR&SP</h1>
             <div class="buttons-container">
-                <a href="#" class="btn-custom register-btn">REGISTRATE</a>
-                <a href="#" class="btn-custom login-btn">INICIAR SESIÓN</a>
+                @if (string.IsNullOrEmpty(usuario))
+                {
+                    <a href="#" class="btn-custom register-btn">REGISTRATE</a>
+                    <a asp-controller="Home" asp-action="Login" class="btn-custom login-btn">INICIAR SESIÓN</a>
+                }
+                else
+                {
+                    <span>Hola, @usuario</span>
+                }
             </div>
         </div>
 
