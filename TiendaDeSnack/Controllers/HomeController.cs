@@ -1,69 +1,98 @@
-using System.Diagnostics;
+Ôªøusing System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;        
 using TiendaDeSnack.Models;
-using Microsoft.AspNetCore.Http;
+using TiendaDeSnack.Data;                 
+using Microsoft.AspNetCore.Http;            
 
 namespace TiendaDeSnack.Controllers
 {
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
+        private readonly AppDbContexto _db;   
 
-        public HomeController(ILogger<HomeController> logger)
+        public HomeController(ILogger<HomeController> logger, AppDbContexto db)
         {
             _logger = logger;
+            _db = db;
         }
 
         public IActionResult Index()
         {
-            // Si hay usuario guardado en sesiÛn, se lo pasamos a la vista
             ViewBag.Usuario = HttpContext.Session.GetString("Usuario");
+            ViewBag.Rol = HttpContext.Session.GetString("Rol");
             return View();
         }
 
-        public IActionResult Menu()
-        {
-            return View();// buscar· Views/Home/Menu.cshtml
-        }
-
-        public IActionResult Pedidos()
-        {
-            return View();// buscar· Views/Home/Pedidos.cshtml
-        }
-
-        public IActionResult Resenas()
-        {
-            return View();// buscar· Views/Home/Resenas.cshtml
-        }
+        public IActionResult Menu() => View(); // Views/Home/Menu.cshtml
+        public IActionResult Pedidos() => View(); // Views/Home/Pedidos.cshtml
+        public IActionResult Resenas() => View(); // Views/Home/Resenas.cshtml
 
         [HttpGet]
-        public IActionResult Login()
+        public IActionResult Login() => View();    // Views/Home/Login.cshtml
+
+        [HttpGet]
+        public IActionResult Panel()
         {
-            return View(); // buscar· Views/Home/Login.cshtml
+            var rol = HttpContext.Session.GetString("Rol");
+            if (!string.Equals(rol, "Admin", StringComparison.OrdinalIgnoreCase))
+                return RedirectToAction("Index");
+
+            return View("Panel"); // ‚Üê Views/Home/Panel.cshtml
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Login(string usuario, string password)
+        public async Task<IActionResult> Login(string usuario, string password)
         {
-            // ValidaciÛn simple
             if (string.IsNullOrWhiteSpace(usuario) || string.IsNullOrWhiteSpace(password))
             {
                 ViewBag.Error = "Por favor, completa todos los campos.";
                 return View();
             }
 
-            // Guardar el usuario en la sesiÛn
-            HttpContext.Session.SetString("Usuario", usuario);
+            // 1) Intento como Cliente
+            var cliente = await _db.Clientes
+                                   .AsNoTracking()
+                                   .SingleOrDefaultAsync(c => c.Usuario == usuario);
 
-            // Redirigir al inicio
+            if (cliente != null && cliente.Contrase√±a == password)
+            {
+                HttpContext.Session.SetString("Usuario", cliente.Usuario ?? cliente.Nombre);
+                HttpContext.Session.SetString("Rol", "Cliente");
+                return RedirectToAction("Index");
+            }
+
+            // 2) Intento como Empleado (incluye Repartidor/Admin por TipoUsuario)
+            var empleado = await _db.Empleados
+                                    .AsNoTracking()
+                                    .SingleOrDefaultAsync(e => e.Usuario == usuario);
+
+            if (empleado != null && empleado.Contrase√±a == password)
+            {
+                HttpContext.Session.SetString("Usuario", empleado.Usuario ?? empleado.Nombre);
+                HttpContext.Session.SetString("Rol", empleado.TipoUsuario ?? "Empleado"); // "Empleado" | "Repartidor" | "Admin"
+
+                // üîÅ CAMBIO: redirigir a Panel en Home (no en Admin)
+                if (string.Equals(empleado.TipoUsuario, "Admin", StringComparison.OrdinalIgnoreCase))
+                    return RedirectToAction("Panel", "Home");
+
+                return RedirectToAction("Index");
+            }
+
+            // Credenciales inv√°lidas
+            ViewBag.Error = "Usuario o contrase√±a incorrectos.";
+            return View();
+        }
+
+        public IActionResult Logout()
+        {
+            HttpContext.Session.Clear();
             return RedirectToAction("Index");
         }
 
-        public IActionResult Privacy()
-        {
-            return View();
-        }
+        public IActionResult Privacy() => View();
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
