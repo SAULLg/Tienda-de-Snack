@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35327.3
 MinimumVisualStudioVersion = 10.0.40219.1
+<<<<<<< Updated upstream:Tienda de Snack/TiendaDeSnack.sln
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TiendaDeSnack", "TiendaDeSnack.csproj", "{ACF1A716-0EC0-4EF0-BA5E-95412AC6C2FE}"
+=======
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TiendaDeSnack", "TiendaDeSnack.csproj", "{8B109A87-2DEA-08F3-7B92-07222E320B03}"
+>>>>>>> Stashed changes:TiendaDeSnack/TiendaDeSnack.sln
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,0 +1,50 @@
+﻿@{
+    ViewData["Title"] = "Registrarse";
+}
+
+<div class="container py-5 text-center">
+    <h1 class="text-center" style="color: #FFD700;">REGISTRARSE</h1>
+
+    <div style="display: flex; justify-content: center; margin-top: 40px;">
+        <div style="background-color: #000; border: 2px solid #FFD700; border-radius: 10px; padding: 40px; width: 350px; text-align: center;">
+
+            @if (ViewBag.Error != null)
+            {
+                    <p class="text-danger">@ViewBag.Error</p>
+            }
+
+            <form asp-action="Login" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3 text-start">
+                <label for="nombre" style="color: #FFD700; font-weight: 600;">NOMBRE</label>
+                <input type="text" id="nombre" name="nombre" class="form-control mt-1"
+                       placeholder="Nombre" style="background-color: #fff; color: #000;">
+                </div>
+
+                <div class="mb-3 text-start">
+                <label for="apellido_P" style="color: #FFD700; font-weight: 600;">APELLIDO</label>
+                <input type="text" id="usuario" name="usuario" class="form-control mt-1"
+                       placeholder="APELLIDO" style="background-color: #fff; color: #000;">
+                </div>
+
+                <div class="mb-3 text-start">
+                    <label for="usuario" style="color: #FFD700; font-weight: 600;">USUARIO</label>
+                    <input type="text" id="usuario" name="usuario" class="form-control mt-1"
+                           placeholder="Usuario" style="background-color: #fff; color: #000;">
+                </div>
+
+                <div class="mb-3 text-start">
+                    <label for="contraseña" style="color: #FFD700; font-weight: 600;">CONTRASEÑA</label>
+                    <input type="password" id="contraseña" name="password" class="form-control mt-1"
+                           placeholder="Contraseña" style="background-color: #fff; color: #000;">
+                </div>
+
+                <button type="submit" class="btn btn-warning w-100 fw-bold" style="color: #000;">Registrarser</button>
+
+
+            </form>
+        </div>
+    </div>
+</div>
+
