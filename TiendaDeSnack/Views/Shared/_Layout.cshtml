@@ -17,9 +17,21 @@
             <div class="container-fluid">
 
                 @{
-                    // detectar rol en sesión
+                    // detectar rol y ruta actual
                     var rol = Context.Session.GetString("Rol");
                     var esAdmin = string.Equals(rol, "Admin", StringComparison.OrdinalIgnoreCase);
+
+                    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+                    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+                    var tab = Context.Request.Query["tab"].ToString();
+
+                    // Activos (admin)
+                    bool activeInicio = esAdmin && currentController == "Home" && currentAction == "Panel" && string.IsNullOrEmpty(tab);
+                    bool activeProductos = esAdmin && ((currentController == "AdminProductos" && currentAction == "Index")
+                    || (currentController == "Home" && currentAction == "Panel" && tab == "Productos"));
+                    bool activeEmpleados = esAdmin && (currentController == "Home" && currentAction == "Panel" && tab == "Empleados");
+                    bool activePedidos = esAdmin && (currentController == "Home" && currentAction == "Panel" && tab == "Pedidos");
+                    bool activeRepartidores = esAdmin && (currentController == "Home" && currentAction == "Panel" && tab == "Repartidores");
                 }
 
                 <!-- Logo -->
@@ -48,35 +60,44 @@
                         {
                             <!-- Menú para ADMIN -->
                             <li class="nav-item">
-                                <a class="nav-link text-light active-link" asp-controller="Home" asp-action="Panel">Inicio</a>
+                                <a class="nav-link text-light @(activeInicio ? "active-link" : "")"
+                                   asp-controller="Home" asp-action="Panel">Inicio</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-light" asp-controller="Home" asp-action="Panel" asp-route-tab="Productos">Productos</a>
+                                <a class="nav-link text-light @(activeProductos ? "active-link" : "")"
+                                   asp-controller="AdminProductos" asp-action="Index">Productos</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-light" asp-controller="Home" asp-action="Panel" asp-route-tab="Empleados">Empleados</a>
+                                <a class="nav-link text-light @(activeEmpleados ? "active-link" : "")"
+                                   asp-controller="Home" asp-action="Panel" asp-route-tab="Empleados">Empleados</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-light" asp-controller="Home" asp-action="Panel" asp-route-tab="Pedidos">Pedidos</a>
+                                <a class="nav-link text-light @(activePedidos ? "active-link" : "")"
+                                   asp-controller="Home" asp-action="Panel" asp-route-tab="Pedidos">Pedidos</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-light" asp-controller="Home" asp-action="Panel" asp-route-tab="Repartidores">Repartidores</a>
+                                <a class="nav-link text-light @(activeRepartidores ? "active-link" : "")"
+                                   asp-controller="Home" asp-action="Panel" asp-route-tab="Repartidores">Repartidores</a>
                             </li>
                         }
                         else
                         {
                             <!-- Menú normal (cliente) -->
                             <li class="nav-item">
-                                <a class="nav-link text-light active-link" asp-controller="Home" asp-action="Index">Inicio</a>
+                                <a class="nav-link text-light @(currentController == "Home" && currentAction == "Index" ? "active-link" : "")"
+                                   asp-controller="Home" asp-action="Index">Inicio</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-light" asp-controller="Home" asp-action="Menu">Menu</a>
+                                <a class="nav-link text-light @(currentController == "Home" && currentAction == "Menu" ? "active-link" : "")"
+                                   asp-controller="Home" asp-action="Menu">Menu</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-light" asp-controller="Home" asp-action="Pedidos">Pedidos</a>
+                                <a class="nav-link text-light @(currentController == "Home" && currentAction == "Pedidos" ? "active-link" : "")"
+                                   asp-controller="Home" asp-action="Pedidos">Pedidos</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-light" asp-controller="Home" asp-action="Resenas">Reseñas</a>
+                                <a class="nav-link text-light @(currentController == "Home" && currentAction == "Resenas" ? "active-link" : "")"
+                                   asp-controller="Home" asp-action="Resenas">Reseñas</a>
                             </li>
                         }
                     </ul>
@@ -90,10 +111,10 @@
                         </div>
 
                         @{
-                            var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+                            var currentActionOnly = ViewContext.RouteData.Values["action"]?.ToString();
                         }
 
-                        @if (currentAction != "Resenas")
+                        @if (currentActionOnly != "Resenas")
                         {
                             <a href="#" class="nav-icon-link cart-icon-lg"><i class="fas fa-shopping-cart"></i></a>
                             <a href="#" class="nav-icon-link profile-icon-lg"><i class="fas fa-user-circle"></i></a>

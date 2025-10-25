@@ -1,16 +1,16 @@
 ﻿using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;        
+using Microsoft.EntityFrameworkCore;
 using TiendaDeSnack.Models;
-using TiendaDeSnack.Data;                 
-using Microsoft.AspNetCore.Http;            
+using TiendaDeSnack.Data;
+using Microsoft.AspNetCore.Http;
 
 namespace TiendaDeSnack.Controllers
 {
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
-        private readonly AppDbContexto _db;   
+        private readonly AppDbContexto _db;
 
         public HomeController(ILogger<HomeController> logger, AppDbContexto db)
         {
@@ -18,6 +18,7 @@ namespace TiendaDeSnack.Controllers
             _db = db;
         }
 
+        // Página principal (clientes)
         public IActionResult Index()
         {
             ViewBag.Usuario = HttpContext.Session.GetString("Usuario");
@@ -25,23 +26,26 @@ namespace TiendaDeSnack.Controllers
             return View();
         }
 
-        public IActionResult Menu() => View(); // Views/Home/Menu.cshtml
-        public IActionResult Pedidos() => View(); // Views/Home/Pedidos.cshtml
-        public IActionResult Resenas() => View(); // Views/Home/Resenas.cshtml
+        public IActionResult Menu() => View();
+        public IActionResult Pedidos() => View();
+        public IActionResult Resenas() => View();
 
         [HttpGet]
-        public IActionResult Login() => View();    // Views/Home/Login.cshtml
+        public IActionResult Login() => View();
 
+        // Panel único corregido (Admin)
         [HttpGet]
-        public IActionResult Panel()
+        public IActionResult Panel(string? tab = null)
         {
             var rol = HttpContext.Session.GetString("Rol");
             if (!string.Equals(rol, "Admin", StringComparison.OrdinalIgnoreCase))
                 return RedirectToAction("Index");
 
-            return View("Panel"); // ← Views/Home/Panel.cshtml
+            ViewBag.Tab = string.IsNullOrWhiteSpace(tab) ? "Productos" : tab;
+            return View("Panel"); // Views/Home/Panel.cshtml
         }
 
+        // ✅ Login que conecta con base de datos
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(string usuario, string password)
@@ -52,7 +56,7 @@ namespace TiendaDeSnack.Controllers
                 return View();
             }
 
-            // 1) Intento como Cliente
+            // 1️⃣ Intento como Cliente
             var cliente = await _db.Clientes
                                    .AsNoTracking()
                                    .SingleOrDefaultAsync(c => c.Usuario == usuario);
@@ -64,7 +68,7 @@ namespace TiendaDeSnack.Controllers
                 return RedirectToAction("Index");
             }
 
-            // 2) Intento como Empleado (incluye Repartidor/Admin por TipoUsuario)
+            // 2️⃣ Intento como Empleado (incluye Admin / Repartidor)
             var empleado = await _db.Empleados
                                     .AsNoTracking()
                                     .SingleOrDefaultAsync(e => e.Usuario == usuario);
@@ -72,20 +76,19 @@ namespace TiendaDeSnack.Controllers
             if (empleado != null && empleado.Contraseña == password)
             {
                 HttpContext.Session.SetString("Usuario", empleado.Usuario ?? empleado.Nombre);
-                HttpContext.Session.SetString("Rol", empleado.TipoUsuario ?? "Empleado"); // "Empleado" | "Repartidor" | "Admin"
+                HttpContext.Session.SetString("Rol", empleado.TipoUsuario ?? "Empleado");
 
-                // 🔁 CAMBIO: redirigir a Panel en Home (no en Admin)
+                // Si es Admin -> Panel
                 if (string.Equals(empleado.TipoUsuario, "Admin", StringComparison.OrdinalIgnoreCase))
                     return RedirectToAction("Panel", "Home");
 
                 return RedirectToAction("Index");
             }
-
-            // Credenciales inválidas
             ViewBag.Error = "Usuario o contraseña incorrectos.";
             return View();
         }
 
+        //  Cerrar sesión
         public IActionResult Logout()
         {
             HttpContext.Session.Clear();
