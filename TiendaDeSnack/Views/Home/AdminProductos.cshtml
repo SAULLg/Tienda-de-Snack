@@ -1,17 +1,40 @@
 ﻿@model IEnumerable<TiendaDeSnack.Models.Producto>
 @{
     ViewData["Title"] = "Productos (Admin)";
+    var isEdit = (ViewBag.IsEdit as bool?) == true;
+    var edit = ViewBag.EditItem as TiendaDeSnack.Models.Producto;
 }
-\
+
+<!-- Mensajes -->
+@if (TempData["Ok"] != null)
+{
+    <div class="alert alert-success" role="alert">@TempData["Ok"]</div>
+}
+@if (TempData["Err"] != null)
+{
+    <div class="alert alert-danger" role="alert">@TempData["Err"]</div>
+}
+
+<!-- Evita que la navbar tape contenido -->
 <div style="padding-top: 100px;">
+
+    <!-- Botón que baja al form -->
     <div style="margin:12px 0 18px 0;">
         <a href="#form-nuevo" class="btn" style="background:#2e294e; color:#fff; padding:10px 18px; border-radius:28px; font-weight:700;">
-            Agregar producto
+            @(isEdit ? "Editar producto" : "Agregar producto")
         </a>
+        @if (isEdit)
+        {
+            <a asp-controller="AdminProductos" asp-action="Index"
+               class="btn btn-secondary" style="margin-left:10px; border-radius:28px; padding:10px 18px;">
+                Cancelar
+            </a>
+        }
     </div>
 
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:28px;">
 
+        <!-- Columna izquierda: Lista -->
         <div>
             @foreach (var p in Model)
             {
@@ -26,11 +49,13 @@
                     </div>
 
                     <div style="margin-left:auto; display:flex; gap:12px;">
-                        <a class="btn" style="background:#3c375f; color:#fff; border-radius:18px; padding:8px 16px; font-weight:700;">
+                        <!-- Editar: abre el mismo formulario con datos -->
+                        <a asp-controller="AdminProductos" asp-action="Editar" asp-route-id="@p.Id"
+                           class="btn" style="background:#3c375f; color:#fff; border-radius:18px; padding:8px 16px; font-weight:700;">
                             Editar
                         </a>
 
-                        <!-- Eliminar -> acción correcta -->
+                        <!-- Eliminar -->
                         <form asp-controller="AdminProductos" asp-action="Eliminar" asp-route-id="@p.Id" method="post" style="display:inline;">
                             @Html.AntiForgeryToken()
                             <button type="submit" class="btn" style="background:#3c375f; color:#fff; border-radius:18px; padding:8px 16px; font-weight:700;"
@@ -43,28 +68,45 @@
             }
         </div>
 
-        <!-- Columna derecha -->
+        <!-- Columna derecha: Formulario (Crear/Editar) -->
         <div>
-            <!-- Crear -> acción correcta -->
-            <form asp-controller="AdminProductos" asp-action="Crear" method="post" enctype="multipart/form-data" id="form-nuevo"
+            <form asp-controller="AdminProductos"
+                  asp-action="@(isEdit ? "Actualizar" : "Crear")"
+                  method="post" enctype="multipart/form-data" id="form-nuevo"
                   style="background:#111; border:2px solid #FFD700; border-radius:12px; padding:16px;">
                 @Html.AntiForgeryToken()
 
+                @if (isEdit)
+                {
+                    <input type="hidden" name="id" value="@edit?.Id" />
+                }
+
                 <div style="color:#FFD700; font-weight:700;">Imagen</div>
+
+                @if (isEdit && !string.IsNullOrEmpty(edit?.ImagenUrl))
+                {
+                    <div class="mb-2">
+                        <img src="@edit.ImagenUrl" alt="Imagen actual" style="height:80px; border-radius:8px; object-fit:cover;" />
+                    </div>
+                }
                 <input type="file" name="imagen" class="form-control" />
 
                 <div class="mt-3" style="color:#FFD700; font-weight:700;">Nombre:</div>
-                <input type="text" name="nombre" class="form-control" style="background:#2c2840; color:#fff; border:0; height:44px;" required />
+                <input type="text" name="nombre"
+                       value="@(isEdit? edit?.Nombre : null)"
+                       class="form-control" style="background:#2c2840; color:#fff; border:0; height:44px;" required />
 
                 <div class="mt-3" style="color:#FFD700; font-weight:700;">Precio:</div>
-                <input type="number" name="precio" step="0.01" class="form-control" style="background:#2c2840; color:#fff; border:0; height:44px;" required />
+                <input type="number" name="precio" step="0.01"
+                       value="@(isEdit? edit?.Precio.ToString("0.00") : null)"
+                       class="form-control" style="background:#2c2840; color:#fff; border:0; height:44px;" required />
 
                 <div class="mt-3" style="color:#FFD700; font-weight:700;">Descripción</div>
-                <textarea name="descripcion" rows="3" class="form-control" style="background:#2c2840; color:#fff; border:0;"></textarea>
+                <textarea name="descripcion" rows="3" class="form-control" style="background:#2c2840; color:#fff; border:0;">@(isEdit? edit?.Descripcion : null)</textarea>
 
                 <div class="text-center mt-3">
                     <button type="submit" class="btn" style="background:#3c375f; color:#fff; border-radius:28px; padding:10px 28px; font-weight:700;">
-                        Agregar
+                        @(isEdit ? "Guardar" : "Agregar")
                     </button>
                 </div>
             </form>
