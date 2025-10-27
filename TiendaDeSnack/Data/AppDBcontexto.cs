@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Reflection.Emit;
 using TiendaDeSnack.Models;
 
 namespace TiendaDeSnack.Data
@@ -29,8 +30,15 @@ namespace TiendaDeSnack.Data
             mb.Entity<VentaDetalle>()
               .HasOne(d => d.Producto).WithMany()
               .HasForeignKey(d => d.ProductoId);
-
             base.OnModelCreating(mb);
+
+            mb.Entity<Cliente>()
+            .HasIndex(c => c.Usuario)
+            .IsUnique();
+
+            mb.Entity<Empleado>()
+            .HasIndex(e => e.Usuario)
+            .IsUnique();
         }
     }
 }

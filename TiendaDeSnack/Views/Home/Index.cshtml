@@ -10,7 +10,7 @@
             <div class="buttons-container">
                 @if (string.IsNullOrEmpty(usuario))
                 {
-                    <a href="#" class="btn-custom register-btn">REGISTRATE</a>
+                    <a asp-controller="Home"  asp-action="Registro"class="btn-custom register-btn">REGISTRATE</a>
                     <a asp-controller="Home" asp-action="Login" class="btn-custom login-btn">INICIAR SESIÓN</a>
                 }
                 else
