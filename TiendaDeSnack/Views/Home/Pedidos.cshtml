@@ -2,12 +2,46 @@
     ViewData["Title"] = "Pedidos";
 }
 
-<div class="container py-5">
-    <h1 class="text-center" style="color: #000;">
-        ¡Realiza tu Pedido!
-    </h1>
-    <p class="text-center text-dark">
+<div class="menu-page-container">
+    @* Reutiliza estilos de espaciado y fondo de menú *@
+    <h1 class="text-center menu-title">¡Realiza tu Pedido!</h1>
+    <p class="text-center menu-subtitle">
         Aquí podrás ver tus pedidos anteriores o empezar uno nuevo.
     </p>
 
+    <div class="container text-center py-5">
+        <p class="text-dark fs-5">
+            Actualmente no tienes pedidos activos.
+        </p>
+        <p class="text-dark fs-5">
+            ¡Explora nuestro <a asp-controller="Home" asp-action="Menu" class="text-decoration-none" style="color:#f7d23a; font-weight:bold;">menú</a> para empezar a pedir!
+        </p>
+
+        <div class="mt-5 buttons-container-center">
+            <a asp-controller="Home" asp-action="Menu" class="btn btn-primary btn-custom register-btn">
+                Ver Menú
+            </a>
+            <a href="#" class="btn btn-secondary btn-custom login-btn" style="color: #000; border-color: #000; background-color: transparent;">
+                Mis Pedidos Anteriores
+            </a>
+        </div>
+    </div>
 </div>
+
+<footer class="contact-footer-bar">
+    <div class="container contact-bar">
+        <p><i class="fab fa-whatsapp"></i> 686 316 0010</p>
+        <p><i class="fab fa-facebook-f"></i> SNACK JR&SP</p>
+    </div>
+</footer>
+
+<style>
+    /* Estilos específicos para esta página (Asegúrate de que este CSS esté también en site.css) */
+    .buttons-container-center {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+    }
+
+    /* El estilo de los botones register-btn y login-btn viene de site.css */
+</style>

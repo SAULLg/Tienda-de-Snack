@@ -1,4 +1,6 @@
-﻿@{
+﻿@model IEnumerable<TiendaDeSnack.Models.Producto>
+
+@{
     ViewData["Title"] = "Nuestro Menú";
 }
 
@@ -7,116 +9,25 @@
     <p class="text-center menu-subtitle">¡Descubre nuestras deliciosas opciones!</p>
 
     <div class="product-grid">
-        <div class="product-item">
-            <div class="product-image-placeholder">
-                <img src="~/images/pepinos-locos.jpg" alt="Pepinos Locos" class="product-img">
-                <button class="add-to-cart-btn">+</button>
-            </div>
-            <h3 class="product-name">PEPINOS LOCOS</h3>
-            <p class="product-price">95.00</p>
-        </div>
 
-        <div class="product-item">
-            <div class="product-image-placeholder">
-                <img src="~/images/fresas-con-crema.jpg" alt="Fresas con Crema" class="product-img">
-                <button class="add-to-cart-btn">+</button>
-            </div>
-            <h3 class="product-name">FRESAS CON CREMA</h3>
-            <p class="product-price">95.00</p>
-        </div>
+        @foreach (var producto in Model)
+        {
+            <div class="product-item">
+                <div class="product-image-placeholder">
+                    <img src="~/images/productos/@(producto.Nombre.Replace(" ", "-").ToLower()).jpg"
+                         alt="@producto.Nombre" class="product-img">
 
-        <div class="product-item">
-            <div class="product-image-placeholder">
-                <img src="~/images/tostielotes.jpg" alt="Tostielotes" class="product-img">
-                <button class="add-to-cart-btn">+</button>
+                    <button class="add-to-cart-btn"
+                            data-product-id="@producto.Id">
+                        +
+                    </button>
+                </div>
+                <h3 class="product-name">@producto.Nombre</h3>
+                <p class="product-price">@producto.Precio.ToString("N2")</p>
             </div>
-            <h3 class="product-name">TOSTIELOTES</h3>
-            <p class="product-price">130.00</p>
-        </div>
-
-        <div class="product-item">
-            <div class="product-image-placeholder">
-                <img src="~/images/churros-locos.jpg" alt="Churros Locos" class="product-img">
-                <button class="add-to-cart-btn">+</button>
-            </div>
-            <h3 class="product-name">CHURROS LOCOS</h3>
-            <p class="product-price">95.00</p>
-        </div>
-
-        <div class="product-item">
-            <div class="product-image-placeholder">
-                <img src="~/images/producto5.jpg" alt="Producto 5" class="product-img">
-                <button class="add-to-cart-btn">+</button>
-            </div>
-            <h3 class="product-name">PRODUCTO 5</h3>
-            <p class="product-price">80.00</p>
-        </div>
-
-        <div class="product-item">
-            <div class="product-image-placeholder">
-                <img src="~/images/producto6.jpg" alt="Producto 6" class="product-img">
-                <button class="add-to-cart-btn">+</button>
-            </div>
-            <h3 class="product-name">PRODUCTO 6</h3>
-            <p class="product-price">110.00</p>
-        </div>
-
-        <div class="product-item">
-            <div class="product-image-placeholder">
-                <img src="~/images/producto7.jpg" alt="Producto 7" class="product-img">
-                <button class="add-to-cart-btn">+</button>
-            </div>
-            <h3 class="product-name">PRODUCTO 7</h3>
-            <p class="product-price">75.00</p>
-        </div>
-
-        <div class="product-item">
-            <div class="product-image-placeholder">
-                <img src="~/images/producto8.jpg" alt="Producto 8" class="product-img">
-                <button class="add-to-cart-btn">+</button>
-            </div>
-            <h3 class="product-name">PRODUCTO 8</h3>
-            <p class="product-price">100.00</p>
-        </div>
-
+        }
     </div>
 </div>
 
-<footer class="menu-footer">
-    <div class="container contact-bar">
-        <p><i class="fab fa-whatsapp"></i> 686 316 0010</p>
-        <p><i class="fab fa-facebook-f"></i> SNACK JR&SP</p>
-        <a href="#" class="cart-icon"><i class="fas fa-shopping-cart"></i></a>
-        <a href="#" class="profile-icon"><i class="fas fa-user-circle"></i></a>
-    </div>
-</footer>
-
-<style>
-    /* Estilos específicos para la página de Menú que pueden sobrescribir el sitio.css */
-    body {
-        background-color: #f8f8f8; /* Fondo blanco para el cuerpo */
-    }
-
-    .main-content-wrapper {
-        background-color: #f8f8f8; /* Asegura que el wrapper también sea blanco */
-    }
-
-    .menu-page-container {
-        padding-top: 100px; /* Espacio para la barra de navegación fija */
-        min-height: calc(100vh - 100px); /* Ajusta la altura para que el footer no suba */
-        background-color: #f8f8f8; /* Fondo de la página de menú */
-    }
-
-    .menu-title {
-        font-size: 2.5em;
-        font-weight: bold;
-        color: #000 !important; /* Título negro */
-        margin-bottom: 10px;
-    }
-
-    .menu-subtitle {
-        font-size: 1.1em;
-        color: #555;
-        margin-bottom: 40px;
-    }
-</style>
+@section Scripts {
+}

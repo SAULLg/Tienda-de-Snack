@@ -440,3 +440,44 @@ body {
         padding: 0 15px;
     }
 }
+/* --- Footer de Contacto Específico (Reutilizado del menú) --- */
+.contact-footer-bar {
+    background-color: #f8f8f8;
+    border-top: 1px solid #ddd;
+    padding: 15px 0;
+    /* Usamos position: fixed o sticky si lo quieres visible al hacer scroll */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    z-index: 999;
+}
+
+.contact-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Ajustado para el diseño de Pedidos que no tiene carrito ni usuario en el footer */
+    gap: 50px;
+}
+
+    .contact-bar p {
+        margin: 0;
+        color: #000;
+        font-size: 1.1em;
+        display: flex;
+        align-items: center;
+    }
+
+    .contact-bar i {
+        margin-right: 8px;
+        font-size: 1.3em;
+        color: #000;
+    }
+
+/* Aseguramos que los iconos de carrito y perfil NO aparezcan en el footer de contacto si existieran */
+.contact-footer-bar .cart-icon,
+.contact-footer-bar .profile-icon {
+    display: none;
+}

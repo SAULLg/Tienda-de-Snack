@@ -17,7 +17,7 @@
             <div class="container-fluid">
 
                 @{
-                    // detectar rol y ruta actual
+                    // Detectar rol y ruta actual
                     var rol = Context.Session.GetString("Rol");
                     var esAdmin = string.Equals(rol, "Admin", StringComparison.OrdinalIgnoreCase);
 
@@ -25,7 +25,7 @@
                     var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
                     var tab = Context.Request.Query["tab"].ToString();
 
-                    // Activos (admin)
+                    // Lógica de pestaña activa (admin)
                     bool activeInicio = esAdmin && currentController == "Home" && currentAction == "Panel" && string.IsNullOrEmpty(tab);
                     bool activeProductos = esAdmin && ((currentController == "AdminProductos" && currentAction == "Index")
                     || (currentController == "Home" && currentAction == "Panel" && tab == "Productos"));
@@ -34,7 +34,6 @@
                     bool activeRepartidores = esAdmin && (currentController == "Home" && currentAction == "Panel" && tab == "Repartidores");
                 }
 
-                <!-- Logo -->
                 @if (esAdmin)
                 {
                     <a class="navbar-brand-logo" asp-controller="Home" asp-action="Panel">
@@ -58,7 +57,6 @@
                     <ul class="navbar-nav flex-grow-1 nav-links-custom">
                         @if (esAdmin)
                         {
-                            <!-- Menú para ADMIN -->
                             <li class="nav-item">
                                 <a class="nav-link text-light @(activeInicio ? "active-link" : "")"
                                    asp-controller="Home" asp-action="Panel">Inicio</a>
@@ -82,7 +80,6 @@
                         }
                         else
                         {
-                            <!-- Menú normal (cliente) -->
                             <li class="nav-item">
                                 <a class="nav-link text-light @(currentController == "Home" && currentAction == "Index" ? "active-link" : "")"
                                    asp-controller="Home" asp-action="Index">Inicio</a>
@@ -110,14 +107,18 @@
                             </button>
                         </div>
 
-                        @{
-                            var currentActionOnly = ViewContext.RouteData.Values["action"]?.ToString();
-                        }
-
-                        @if (currentActionOnly != "Resenas")
+                        @* Render cart and profile icons except on Resenas page *@
+                        @if (currentAction != "Resenas")
                         {
-                            <a href="#" class="nav-icon-link cart-icon-lg"><i class="fas fa-shopping-cart"></i></a>
-                            <a href="#" class="nav-icon-link profile-icon-lg"><i class="fas fa-user-circle"></i></a>
+                            <a class="nav-icon-link cart-icon-lg"
+                               data-bs-toggle="offcanvas"
+                               data-bs-target="#offcanvasCarrito"
+                               aria-controls="#offcanvasCarrito">
+                                <i class="fas fa-shopping-cart"></i>
+                            </a>
+                            <a class="nav-icon-link profile-icon-lg" asp-controller="Home" asp-action="Login">
+                                <i class="fas fa-user-circle"></i>
+                            </a>
                         }
                     </div>
                 </div>
@@ -136,6 +137,27 @@
             &copy; 2025 - SNACK JR&SP - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
     </footer>
+
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasCarrito" aria-labelledby="offcanvasCarritoLabel">
+        <div class="offcanvas-header bg-dark text-white">
+            <h5 class="offcanvas-title" id="offcanvasCarritoLabel"><i class="fas fa-shopping-cart"></i> Tu Carrito</h5>
+            <button type="button" class="btn-close btn-close-white text-reset" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column" id="carrito-content-container">
+
+            <div id="carrito-items-list" class="flex-grow-1 overflow-auto mb-3">
+                <p class="text-center text-muted mt-5">Carrito vacío.</p>
+            </div>
+
+            <div class="border-top pt-3">
+                <div class="d-flex justify-content-between fw-bold mb-3">
+                    <span>Subtotal:</span>
+                    <span id="carrito-subtotal">$0.00</span>
+                </div>
+                <button class="btn btn-warning w-100 fw-bold" type="button">Proceder al Pago</button>
+            </div>
+        </div>
+    </div>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
