@@ -10,5 +10,8 @@ namespace TiendaDeSnack.Models
         public decimal Precio { get; set; }
         public string? ImagenUrl { get; set; }
         public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
+
+        // NUEVO: bandera de disponibilidad
+        public bool Activo { get; set; } = true;
     }
 }

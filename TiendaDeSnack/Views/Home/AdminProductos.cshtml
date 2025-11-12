@@ -1,11 +1,31 @@
 ﻿@model IEnumerable<TiendaDeSnack.Models.Producto>
+@using TiendaDeSnack.Models
+
 @{
     ViewData["Title"] = "Productos (Admin)";
     var isEdit = (ViewBag.IsEdit as bool?) == true;
     var edit = ViewBag.EditItem as TiendaDeSnack.Models.Producto;
+
+    var promoIsEdit = (ViewBag.PromoIsEdit as bool?) == true;
+    var promoEdit = ViewBag.PromoEditItem as Promocion;
+
+    var promos = ViewBag.Promos as List<Promocion> ?? new List<Promocion>();
+
+    string DiasToText(DiasSemana d)
+    {
+        if (d == 0) return "—";
+        var items = new List<string>();
+        if (d.HasFlag(DiasSemana.Lunes)) items.Add("Lun");
+        if (d.HasFlag(DiasSemana.Martes)) items.Add("Mar");
+        if (d.HasFlag(DiasSemana.Miercoles)) items.Add("Mié");
+        if (d.HasFlag(DiasSemana.Jueves)) items.Add("Jue");
+        if (d.HasFlag(DiasSemana.Viernes)) items.Add("Vie");
+        if (d.HasFlag(DiasSemana.Sabado)) items.Add("Sáb");
+        if (d.HasFlag(DiasSemana.Domingo)) items.Add("Dom");
+        return string.Join(", ", items);
+    }
 }
 
-<!-- Mensajes -->
 @if (TempData["Ok"] != null)
 {
     <div class="alert alert-success" role="alert">@TempData["Ok"]</div>
@@ -15,18 +35,21 @@
     <div class="alert alert-danger" role="alert">@TempData["Err"]</div>
 }
 
-<!-- Evita que la navbar tape contenido -->
 <div style="padding-top: 100px;">
 
-    <!-- Botón que baja al form -->
-    <div style="margin:12px 0 18px 0;">
-        <a href="#form-nuevo" class="btn" style="background:#2e294e; color:#fff; padding:10px 18px; border-radius:28px; font-weight:700;">
+    <!-- Botones -->
+    <div style="margin:12px 0 18px 0; display:flex; gap:12px; flex-wrap:wrap;">
+        <button id="btnShowFormProducto" type="button" class="btn" style="background:#2e294e; color:#fff; padding:10px 18px; border-radius:28px; font-weight:700;">
             @(isEdit ? "Editar producto" : "Agregar producto")
-        </a>
-        @if (isEdit)
+        </button>
+
+        <button id="btnShowFormPromo" type="button" class="btn" style="background:#2e294e; color:#fff; padding:10px 18px; border-radius:28px; font-weight:700;">
+            @(promoIsEdit ? "Editar promoción" : "Agregar promoción")
+        </button>
+
+        @if (isEdit || promoIsEdit)
         {
-            <a asp-controller="AdminProductos" asp-action="Index"
-               class="btn btn-secondary" style="margin-left:10px; border-radius:28px; padding:10px 18px;">
+            <a asp-controller="AdminProductos" asp-action="Index" class="btn btn-secondary" style="border-radius:28px; padding:10px 18px;">
                 Cancelar
             </a>
         }
@@ -34,31 +57,38 @@
 
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:28px;">
 
-        <!-- Columna izquierda: Lista -->
+        <!-- IZQUIERDA: Listas (mismo diseño para productos y promos) -->
         <div>
+
+            <!-- Productos -->
+            <h4 style="color:#FFD700; font-weight:700; margin-bottom:12px;">Productos</h4>
             @foreach (var p in Model)
             {
                 <div style="display:flex; align-items:center; gap:16px; padding:12px 6px;">
                     <img src="@(string.IsNullOrEmpty(p.ImagenUrl) ? Url.Content("~/images/placeholder.png") : p.ImagenUrl)"
                          asp-append-version="true"
                          style="width:72px; height:72px; border-radius:10px; object-fit:cover;" />
-
                     <div style="color:black; font-weight:700;">
                         @p.Nombre
                         <div style="color:#FFD700; font-weight:700;">@p.Precio.ToString("0.00")</div>
+                        <div class="small" style="color:@(p.Activo ? "#28a745" : "#dc3545");">
+                            @(p.Activo ? "Activo" : "Inactivo")
+                        </div>
                     </div>
-
-                    <div style="margin-left:auto; display:flex; gap:12px;">
-                        <!-- Editar: abre el mismo formulario con datos -->
+                    <div style="margin-left:auto; display:flex; gap:8px;">
                         <a asp-controller="AdminProductos" asp-action="Editar" asp-route-id="@p.Id"
-                           class="btn" style="background:#3c375f; color:#fff; border-radius:18px; padding:8px 16px; font-weight:700;">
-                            Editar
-                        </a>
+                           class="btn" style="background:#3c375f; color:#fff; border-radius:18px; padding:8px 14px; font-weight:700;">Editar</a>
 
-                        <!-- Eliminar -->
+                        <form asp-controller="AdminProductos" asp-action="ToggleActivo" asp-route-id="@p.Id" method="post" style="display:inline;">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn" style="background:@(p.Activo ? "#6c757d" : "#198754"); color:#fff; border-radius:18px; padding:8px 14px; font-weight:700;">
+                                @(p.Activo ? "Desactivar" : "Activar")
+                            </button>
+                        </form>
+
                         <form asp-controller="AdminProductos" asp-action="Eliminar" asp-route-id="@p.Id" method="post" style="display:inline;">
                             @Html.AntiForgeryToken()
-                            <button type="submit" class="btn" style="background:#3c375f; color:#fff; border-radius:18px; padding:8px 16px; font-weight:700;"
+                            <button type="submit" class="btn" style="background:#3c375f; color:#fff; border-radius:18px; padding:8px 14px; font-weight:700;"
                                     onclick="return confirm('¿Eliminar @p.Nombre?');">
                                 Eliminar
                             </button>
@@ -66,43 +96,92 @@
                     </div>
                 </div>
             }
+
+            <!-- Promociones (misma card) -->
+            <h4 class="mt-4" style="color:#FFD700; font-weight:700;">Promociones</h4>
+            @foreach (var pr in promos)
+            {
+                var img = string.IsNullOrEmpty(pr.ImagenUrl) ? Url.Content("~/images/placeholder.png") : pr.ImagenUrl;
+                var horario = (pr.HoraInicio?.ToString(@"hh\:mm") ?? "00:00") + " - " + (pr.HoraFin?.ToString(@"hh\:mm") ?? "23:59");
+                <div style="display:flex; align-items:center; gap:16px; padding:12px 6px;">
+                    <img src="@img" style="width:72px; height:72px; border-radius:10px; object-fit:cover;" />
+                    <div style="color:black; font-weight:700;">
+                        @pr.Nombre
+                        <div style="color:#FFD700; font-weight:700;">@pr.Precio.ToString("0.00")</div>
+                        <div class="small text-muted" style="color:#bbb!important;">@DiasToText(pr.DiasPermitidos) • @horario</div>
+                        <div class="small" style="color:@(pr.Activo ? "#28a745" : "#dc3545");">
+                            @(pr.Activo ? "Activo" : "Inactivo")
+                        </div>
+                    </div>
+                    <div style="margin-left:auto; display:flex; gap:8px;">
+                        <a asp-controller="AdminProductos" asp-action="EditarPromocion" asp-route-id="@pr.Id"
+                           class="btn" style="background:#3c375f; color:#fff; border-radius:18px; padding:8px 14px; font-weight:700;">Editar</a>
+
+                        <form asp-controller="AdminProductos" asp-action="ToggleActivoPromocion" method="post" style="display:inline;">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@pr.Id" />
+                            <button class="btn" style="background:@(pr.Activo ? "#6c757d" : "#198754"); color:#fff; border-radius:18px; padding:8px 14px; font-weight:700;">
+                                @(pr.Activo ? "Desactivar" : "Activar")
+                            </button>
+                        </form>
+
+                        <form asp-controller="AdminProductos" asp-action="EliminarPromocion" method="post" style="display:inline;">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@pr.Id" />
+                            <button class="btn" style="background:#3c375f; color:#fff; border-radius:18px; padding:8px 14px; font-weight:700;"
+                                    onclick="return confirm('¿Eliminar esta promoción?');">
+                                Eliminar
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+
+            @if (!promos.Any())
+            {
+                <p class="mt-3 text-light">Aún no hay promociones registradas.</p>
+            }
+
         </div>
 
-        <!-- Columna derecha: Formulario (Crear/Editar) -->
+        <!-- DERECHA: Formularios (ocultos hasta que se pulsen los botones) -->
         <div>
+
+            <!-- Form Producto -->
             <form asp-controller="AdminProductos"
                   asp-action="@(isEdit ? "Actualizar" : "Crear")"
-                  method="post" enctype="multipart/form-data" id="form-nuevo"
-                  style="background:#111; border:2px solid #FFD700; border-radius:12px; padding:16px;">
+                  method="post" enctype="multipart/form-data" id="formProducto"
+                  style="display:@(isEdit ? "block" : "none"); background:#111; border:2px solid #FFD700; border-radius:12px; padding:16px; margin-bottom:22px;">
                 @Html.AntiForgeryToken()
-
                 @if (isEdit)
                 {
                     <input type="hidden" name="id" value="@edit?.Id" />
                 }
 
-                <div style="color:#FFD700; font-weight:700;">Imagen</div>
+                <h4 style="color:#FFD700; font-weight:700; margin-bottom:12px;">@(isEdit ? "Editar producto" : "Nuevo producto")</h4>
 
+                <div style="color:#FFD700; font-weight:700;">Imagen</div>
                 @if (isEdit && !string.IsNullOrEmpty(edit?.ImagenUrl))
                 {
-                    <div class="mb-2">
-                        <img src="@edit.ImagenUrl" alt="Imagen actual" style="height:80px; border-radius:8px; object-fit:cover;" />
-                    </div>
+                    <div class="mb-2"><img src="@edit.ImagenUrl" alt="Imagen actual" style="height:80px; border-radius:8px; object-fit:cover;" /></div>
                 }
                 <input type="file" name="imagen" class="form-control" />
 
                 <div class="mt-3" style="color:#FFD700; font-weight:700;">Nombre:</div>
-                <input type="text" name="nombre"
-                       value="@(isEdit? edit?.Nombre : null)"
+                <input type="text" name="nombre" value="@(isEdit? edit?.Nombre : null)"
                        class="form-control" style="background:#2c2840; color:#fff; border:0; height:44px;" required />
 
                 <div class="mt-3" style="color:#FFD700; font-weight:700;">Precio:</div>
-                <input type="number" name="precio" step="0.01"
-                       value="@(isEdit? edit?.Precio.ToString("0.00") : null)"
+                <input type="number" name="precio" step="0.01" value="@(isEdit? edit?.Precio.ToString("0.00") : null)"
                        class="form-control" style="background:#2c2840; color:#fff; border:0; height:44px;" required />
 
                 <div class="mt-3" style="color:#FFD700; font-weight:700;">Descripción</div>
                 <textarea name="descripcion" rows="3" class="form-control" style="background:#2c2840; color:#fff; border:0;">@(isEdit? edit?.Descripcion : null)</textarea>
+
+                <div class="form-check mt-3">
+                    <input class="form-check-input" type="checkbox" name="activo" id="chkProdActivo" @(isEdit ? (edit?.Activo == true ? "checked" : null) : "checked") />
+                    <label class="form-check-label text-light" for="chkProdActivo">Activo</label>
+                </div>
 
                 <div class="text-center mt-3">
                     <button type="submit" class="btn" style="background:#3c375f; color:#fff; border-radius:28px; padding:10px 28px; font-weight:700;">
@@ -110,6 +189,102 @@
                     </button>
                 </div>
             </form>
+
+            <!-- Form Promoción -->
+            <form asp-controller="AdminProductos"
+                  asp-action="@(promoIsEdit ? "ActualizarPromocion" : "CrearPromocion")"
+                  method="post" enctype="multipart/form-data" id="formPromo"
+                  style="display:@(promoIsEdit ? "block" : "none"); background:#111; border:2px solid #FFD700; border-radius:12px; padding:16px;">
+                @Html.AntiForgeryToken()
+                @if (promoIsEdit)
+                {
+                    <input type="hidden" name="id" value="@promoEdit?.Id" />
+                }
+
+                <h4 style="color:#FFD700; font-weight:700; margin-bottom:12px;">@(promoIsEdit ? "Editar promoción" : "Nueva promoción")</h4>
+
+                <div class="mb-2" style="color:#FFD700; font-weight:700;">Imagen</div>
+                @if (promoIsEdit && !string.IsNullOrEmpty(promoEdit?.ImagenUrl))
+                {
+                    <div class="mb-2"><img src="@promoEdit.ImagenUrl" style="height:80px; border-radius:8px; object-fit:cover;" /></div>
+                }
+                <input type="file" name="imagen" class="form-control" />
+
+                <div class="mt-3" style="color:#FFD700; font-weight:700;">Nombre:</div>
+                <input type="text" name="nombre" value="@(promoIsEdit? promoEdit?.Nombre : null)"
+                       class="form-control" style="background:#2c2840; color:#fff; border:0; height:44px;" required />
+
+                <div class="mt-3" style="color:#FFD700; font-weight:700;">Precio:</div>
+                <input type="number" name="precio" step="0.01" value="@(promoIsEdit? promoEdit?.Precio.ToString("0.00") : null)"
+                       class="form-control" style="background:#2c2840; color:#fff; border:0; height:44px;" required />
+
+                <div class="mt-3" style="color:#FFD700; font-weight:700;">Horario/días:</div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label text-light">Hora inicio</label>
+                        <input type="time" name="horaInicio" value="@(promoIsEdit? promoEdit?.HoraInicio?.ToString(@"hh\:mm") : null)"
+                               class="form-control" style="background:#2c2840; color:#fff; border:0;" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-light">Hora fin</label>
+                        <input type="time" name="horaFin" value="@(promoIsEdit? promoEdit?.HoraFin?.ToString(@"hh\:mm") : null)"
+                               class="form-control" style="background:#2c2840; color:#fff; border:0;" />
+                    </div>
+                </div>
+
+                @{
+                    bool Has(DiasSemana d) => promoIsEdit && promoEdit != null && promoEdit.DiasPermitidos.HasFlag(d);
+                }
+                <!-- CAMBIO CLAVE: name="dias" value="Lunes|Martes|..." -->
+                <div class="d-flex flex-wrap gap-3 mt-2 text-light">
+                    <label><input type="checkbox" name="dias" value="Lunes" class="form-check-input" @(Has(DiasSemana.Lunes) ? "checked" : null) /> Lunes</label>
+                    <label><input type="checkbox" name="dias" value="Martes" class="form-check-input" @(Has(DiasSemana.Martes) ? "checked" : null) /> Martes</label>
+                    <label><input type="checkbox" name="dias" value="Miercoles" class="form-check-input" @(Has(DiasSemana.Miercoles) ? "checked" : null) /> Miércoles</label>
+                    <label><input type="checkbox" name="dias" value="Jueves" class="form-check-input" @(Has(DiasSemana.Jueves) ? "checked" : null) /> Jueves</label>
+                    <label><input type="checkbox" name="dias" value="Viernes" class="form-check-input" @(Has(DiasSemana.Viernes) ? "checked" : null) /> Viernes</label>
+                    <label><input type="checkbox" name="dias" value="Sabado" class="form-check-input" @(Has(DiasSemana.Sabado) ? "checked" : null) /> Sábado</label>
+                    <label><input type="checkbox" name="dias" value="Domingo" class="form-check-input" @(Has(DiasSemana.Domingo) ? "checked" : null) /> Domingo</label>
+                </div>
+
+                <div class="mt-3" style="color:#FFD700; font-weight:700;">Descripción</div>
+                <textarea name="descripcion" rows="3" class="form-control" style="background:#2c2840; color:#fff; border:0;">@(promoIsEdit? promoEdit?.Descripcion : null)</textarea>
+
+                <div class="form-check mt-3">
+                    <input class="form-check-input" type="checkbox" name="activo" id="chkPromoActivo" @(promoIsEdit ? (promoEdit?.Activo == true ? "checked" : null) : "checked") />
+                    <label class="form-check-label text-light" for="chkPromoActivo">Activo</label>
+                </div>
+
+                <div class="text-center mt-3">
+                    <button type="submit" class="btn" style="background:#3c375f; color:#fff; border-radius:28px; padding:10px 28px; font-weight:700;">
+                        @(promoIsEdit ? "Guardar" : "Agregar")
+                    </button>
+                </div>
+            </form>
+
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        const fProd = document.getElementById('formProducto');
+        const fPromo = document.getElementById('formPromo');
+        const bProd = document.getElementById('btnShowFormProducto');
+        const bPromo = document.getElementById('btnShowFormPromo');
+
+        if (bProd) {
+            bProd.addEventListener('click', () => {
+                if (fProd)  fProd.style.display = 'block';
+                if (fPromo && '@(promoIsEdit ? "1" : "")' !== '1') fPromo.style.display = 'none';
+                fProd?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        }
+        if (bPromo) {
+            bPromo.addEventListener('click', () => {
+                if (fPromo) fPromo.style.display = 'block';
+                if (fProd && '@(isEdit ? "1" : "")' !== '1')  fProd.style.display = 'none';
+                fPromo?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        }
+    </script>
+}
