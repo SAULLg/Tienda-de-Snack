@@ -71,39 +71,10 @@
     {
         <h2 class="text-center" style="color:#FFD700;">Empleados</h2>
         <p class="text-center text-light mb-3">Alta, baja y edición de personal (incluye Admin/Repartidores).</p>
-
-        <div class="table-responsive" style="background:#000; border:2px solid #FFD700; border-radius:12px;">
-            <table class="table table-dark table-striped mb-0">
-                <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Usuario</th>
-                        <th>Tipo</th>
-                        <th style="width:160px;"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Saul García</td>
-                        <td>SaulG</td>
-                        <td>Admin</td>
-                        <td>
-                            <button class="btn btn-sm btn-warning">Editar</button>
-                            <button class="btn btn-sm btn-secondary">Desactivar</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>María Pérez</td>
-                        <td>mperez</td>
-                        <td>Empleado</td>
-                        <td>
-                            <button class="btn btn-sm btn-warning">Editar</button>
-                            <button class="btn btn-sm btn-secondary">Desactivar</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="buttons-container">
+            <a asp-controller="Home" asp-action="RegistroEmpleado" class="btn-custom registeremp-btn">Registrar empleado</a>
         </div>
+      
     }
 
     @* ---------- Pedidos ---------- *@

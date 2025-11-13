@@ -70,8 +70,14 @@ namespace TiendaDeSnack.Controllers
 
         [HttpGet]
         public IActionResult Registro() => View();
+        [HttpGet]
+        public IActionResult RegistroEmpleado() => View();
 
+<<<<<<< HEAD
         // ================= REGISTRO CLIENTE =================
+=======
+        // Registro de clientes que se conecta con base de datos
+>>>>>>> 016b01035b28c46757ead3587e94d8f0a619c709
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Registro(string nombre, string apellido, string usuario, string password)
@@ -138,6 +144,91 @@ namespace TiendaDeSnack.Controllers
                 return View();
             }
         }
+<<<<<<< HEAD
+=======
+
+        //Registro de empleados
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RegistroEmpleado(string nombre, string apellido, string usuario, string password, string tipoEmpleado)
+        {
+
+            nombre = nombre?.Trim();
+            apellido = apellido?.Trim();
+            usuario = usuario?.Trim();
+            tipoEmpleado = tipoEmpleado?.Trim();
+
+            var nombreRegex = new Regex(@"^[\p{L}\p{M}\s'-]+$");
+            var usuarioRegex = new Regex(@"^[A-Za-z0-9_.-]+$");
+
+            var errores = new List<string>();
+
+            //verificar si todos los campos estan completos
+            if (string.IsNullOrWhiteSpace(nombre)) errores.Add("El Nombre es obligatorio.");
+            if (string.IsNullOrWhiteSpace(apellido)) errores.Add("El Apellido es obligatorio.");
+            if (string.IsNullOrWhiteSpace(usuario)) errores.Add("El Usuario es obligatorio.");
+            if (string.IsNullOrWhiteSpace(password)) errores.Add("La contraseña es obligatoria.");
+
+            //Caracteres validos
+            if (!string.IsNullOrWhiteSpace(nombre) && !nombreRegex.IsMatch(nombre))
+                errores.Add("El Nombre contiene caracteres no válidos.");
+            if (!string.IsNullOrWhiteSpace(apellido) && !nombreRegex.IsMatch(apellido))
+                errores.Add("El Apellido  contiene caracteres no válidos.");
+
+            if (!string.IsNullOrWhiteSpace(usuario) && !usuarioRegex.IsMatch(usuario))
+                errores.Add("El Usuario solo puede contener letras, números, punto, guion y guion bajo.");
+
+            if (errores.Count > 0)
+            {
+                ViewBag.Error = string.Join(" ", errores);
+                return View();
+            }
+
+
+            //Valida si no hay el usuario no existe
+            var usuarioOcupado =
+                await _db.Clientes.AsNoTracking().AnyAsync(c => c.Usuario == usuario) ||
+                await _db.Empleados.AsNoTracking().AnyAsync(e => e.Usuario == usuario);
+
+            if (usuarioOcupado)
+            {
+                ViewBag.Error = "El nombre de usuario ya está en uso.";
+                return View();
+            }
+
+            var empleado = new Empleado
+            {
+                Nombre = nombre!,
+                Apellido_P = apellido!,
+                Usuario = usuario!,
+                Contraseña = password,
+                TipoUsuario = tipoEmpleado!
+            };
+
+            try
+            {
+                _db.Empleados.Add(empleado);
+                await _db.SaveChangesAsync();
+
+
+                return RedirectToAction("Panel");
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Error al registrar empleado con usuario {Usuario}", usuario);
+                ViewBag.Error = "Ocurrió un error guardando el usuario. Inténtalo de nuevo.";
+                return View();
+            }
+        }
+
+
+
+
+
+        // ---------------------------------------------------------------------
+        // FUNCIÓN DE CARRITO: Añadir producto (Usa contexto independiente)
+        // ---------------------------------------------------------------------
+>>>>>>> 016b01035b28c46757ead3587e94d8f0a619c709
 
         // ====================================================
         //      CARRITO: AÑADIR (PRODUCTO O PROMOCIÓN)
