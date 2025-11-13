@@ -73,11 +73,11 @@ namespace TiendaDeSnack.Controllers
         [HttpGet]
         public IActionResult RegistroEmpleado() => View();
 
-<<<<<<< HEAD
+
         // ================= REGISTRO CLIENTE =================
-=======
+
         // Registro de clientes que se conecta con base de datos
->>>>>>> 016b01035b28c46757ead3587e94d8f0a619c709
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Registro(string nombre, string apellido, string usuario, string password)
@@ -144,8 +144,7 @@ namespace TiendaDeSnack.Controllers
                 return View();
             }
         }
-<<<<<<< HEAD
-=======
+
 
         //Registro de empleados
         [HttpPost]
@@ -228,7 +227,7 @@ namespace TiendaDeSnack.Controllers
         // ---------------------------------------------------------------------
         // FUNCIÓN DE CARRITO: Añadir producto (Usa contexto independiente)
         // ---------------------------------------------------------------------
->>>>>>> 016b01035b28c46757ead3587e94d8f0a619c709
+
 
         // ====================================================
         //      CARRITO: AÑADIR (PRODUCTO O PROMOCIÓN)
