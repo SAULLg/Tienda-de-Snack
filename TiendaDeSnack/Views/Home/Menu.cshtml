@@ -1,4 +1,4 @@
-﻿@model IEnumerable<TiendaDeSnack.Models.Producto>
+﻿@model TiendaDeSnack.ViewModels.MenuVM
 
 @{
     ViewData["Title"] = "Nuestro Menú";
@@ -8,26 +8,66 @@
     <h1 class="text-center menu-title">Nuestro Menú</h1>
     <p class="text-center menu-subtitle">¡Descubre nuestras deliciosas opciones!</p>
 
-    <div class="product-grid">
+    <!-- ================== PRODUCTOS ================== -->
+    @if (Model.Productos != null && Model.Productos.Any())
+    {
+        <h2 class="mt-4 mb-3 text-center" style="color:#FFD700; font-weight:700;">Productos</h2>
 
-        @foreach (var producto in Model)
-        {
-            <div class="product-item">
-                <div class="product-image-placeholder">
-                    <img src="~/images/productos/@(producto.Nombre.Replace(" ", "-").ToLower()).jpg"
-                         alt="@producto.Nombre" class="product-img">
+        <div class="product-grid">
+            @foreach (var producto in Model.Productos)
+            {
+                <div class="product-item">
+                    <div class="product-image-placeholder">
+                        <img src="~/images/productos/@(producto.Nombre.Replace(" ", "-").ToLower()).jpg"
+                             alt="@producto.Nombre" class="product-img" />
 
-                    <button class="add-to-cart-btn"
-                            data-product-id="@producto.Id">
-                        +
-                    </button>
+                        <button class="add-to-cart-btn"
+                                data-product-id="@producto.Id">
+                            +
+                        </button>
+                    </div>
+                    <h3 class="product-name">@producto.Nombre</h3>
+                    <p class="product-price">@producto.Precio.ToString("N2")</p>
                 </div>
-                <h3 class="product-name">@producto.Nombre</h3>
-                <p class="product-price">@producto.Precio.ToString("N2")</p>
-            </div>
-        }
-    </div>
+            }
+        </div>
+    }
+
+    <!-- ================== PROMOCIONES ================== -->
+    @if (Model.Promociones != null && Model.Promociones.Any())
+    {
+        <h2 class="mt-5 mb-3 text-center" style="color:#FFD700; font-weight:700;">Promociones</h2>
+
+        <div class="product-grid">
+            @foreach (var promo in Model.Promociones)
+            {
+                var imgPromo = string.IsNullOrEmpty(promo.ImagenUrl)
+                ? Url.Content("~/images/placeholder.png")
+                : promo.ImagenUrl;
+
+                <div class="product-item">
+                    <div class="product-image-placeholder">
+                        <img src="@imgPromo"
+                             alt="@promo.Nombre" class="product-img" />
+
+                        <!-- Usa el mismo data-product-id pero con el Id de la promoción -->
+                        <button class="add-to-cart-btn"
+                                data-product-id="@promo.Id">
+                            +
+                        </button>
+
+                        <div style="position:absolute; top:6px; left:6px; background:#ff4081; color:#fff; padding:2px 8px; border-radius:999px; font-size:0.75rem; font-weight:700;">
+                            PROMO
+                        </div>
+                    </div>
+                    <h3 class="product-name">@promo.Nombre</h3>
+                    <p class="product-price">@promo.Precio.ToString("N2")</p>
+                </div>
+            }
+        </div>
+    }
 </div>
 
 @section Scripts {
+    <!-- Aquí se queda tu JS de carrito global, si ya lo tienes en otro archivo -->
 }

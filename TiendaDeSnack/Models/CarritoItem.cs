@@ -9,21 +9,26 @@ namespace TiendaDeSnack.Models
         // Llave Primaria
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        // 🚨 CORRECCIÓN CLAVE: Asegurar que la SessionId no se trunque.
+        // Sesión (cliente no logueado)
         [MaxLength(450)]
         public string SessionId { get; set; } = string.Empty;
 
-        // Clave Foránea al producto
-        public Guid ProductoId { get; set; }
+        // ========= PRODUCTO =========
+        public Guid? ProductoId { get; set; }
 
-        // Propiedades del ítem
+        [ForeignKey("ProductoId")]
+        public Producto? Producto { get; set; }
+
+        // ========= PROMOCIÓN =========
+        public Guid? PromocionId { get; set; }
+
+        [ForeignKey("PromocionId")]
+        public Promocion? Promocion { get; set; }
+
+        // ========= DATOS DEL CARRITO =========
         public int Cantidad { get; set; }
 
         [Column(TypeName = "decimal(18, 2)")]
         public decimal PrecioUnitario { get; set; }
-
-        // Propiedad de Navegación (para la inclusión en EF Core)
-        [ForeignKey("ProductoId")]
-        public Producto Producto { get; set; }
     }
 }
