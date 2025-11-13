@@ -6,26 +6,26 @@ using TiendaDeSnack.Data;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 using System;
-using System.Linq; // Necesario para .Sum()
+using System.Linq;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using TiendaDeSnack.ViewModels; // Para MenuVM
+using System.Data;
+using TiendaDeSnack.ViewModels;
+using System.Threading.Tasks; // Agregado para usar Task
 
 namespace TiendaDeSnack.Controllers
 {
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
+        // Inyección del Factory
         private readonly IDbContextFactory<AppDbContexto> _contextFactory;
-        private readonly AppDbContexto _db;
 
-        public HomeController(
-            ILogger<HomeController> logger,
-            IDbContextFactory<AppDbContexto> contextFactory,
-            AppDbContexto db)
+        // Constructor que recibe el Factory
+        public HomeController(ILogger<HomeController> logger, IDbContextFactory<AppDbContexto> contextFactory)
         {
             _logger = logger;
             _contextFactory = contextFactory;
-            _db = db;
         }
 
         // Página principal (clientes)
@@ -36,321 +36,123 @@ namespace TiendaDeSnack.Controllers
             return View();
         }
 
-        // ========== MENÚ (PRODUCTOS + PROMOCIONES) ==========
+        // Carga los productos de la base de datos para la vista de menú
         public async Task<IActionResult> Menu()
         {
             using (var dbContext = _contextFactory.CreateDbContext())
             {
-                // Productos activos
                 var productos = await dbContext.Productos
-                    .AsNoTracking()
                     .Where(p => p.Activo)
-                    .OrderBy(p => p.Nombre)
                     .ToListAsync();
 
-                // 🔹 AHORA: Promociones activas **SIN** filtrar por día/hora
-                var promos = await dbContext.Promociones
-                    .AsNoTracking()
-                    .Where(pr => pr.Activo)
-                    .OrderBy(pr => pr.Nombre)
+                var promociones = await dbContext.Promociones
+                    .Where(p => p.Activo)
                     .ToListAsync();
 
-                var vm = new MenuVM
+                var viewModel = new MenuVM
                 {
                     Productos = productos,
-                    Promociones = promos
+                    Promociones = promociones
+                };
+
+                return View(viewModel);
+            }
+        }
+
+        // Carga la vista Pedidos (muestra el checkout con el modelo)
+        public async Task<IActionResult> Pedidos()
+        {
+            var sessionId = HttpContext.Session.Id;
+
+            using (var dbContext = _contextFactory.CreateDbContext())
+            {
+                var cartItems = await dbContext.CarritoItems
+                    .Include(c => c.Producto)
+                    .Include(c => c.Promocion)
+                    .Where(c => c.SessionId == sessionId)
+                    .ToListAsync();
+
+                var vm = new FinalizarCompraViewModel
+                {
+                    ItemsDelCarrito = cartItems,
+                    TotalPagar = cartItems.Sum(i => i.PrecioUnitario * i.Cantidad)
                 };
 
                 return View(vm);
             }
         }
 
-        public IActionResult Pedidos() => View();
-        public IActionResult Resenas() => View();
-
-        [HttpGet]
-        public IActionResult Registro() => View();
-        [HttpGet]
-        public IActionResult RegistroEmpleado() => View();
-
-
-        // ================= REGISTRO CLIENTE =================
-
-        // Registro de clientes que se conecta con base de datos
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Registro(string nombre, string apellido, string usuario, string password)
+        public IActionResult Resenas()
         {
-            nombre = nombre?.Trim();
-            apellido = apellido?.Trim();
-            usuario = usuario?.Trim();
-
-            var nombreRegex = new Regex(@"^[\p{L}\p{M}\s'-]+$");
-            var usuarioRegex = new Regex(@"^[A-Za-z0-9_.-]+$");
-
-            var errores = new List<string>();
-
-            if (string.IsNullOrWhiteSpace(nombre)) errores.Add("El Nombre es obligatorio.");
-            if (string.IsNullOrWhiteSpace(apellido)) errores.Add("El Apellido es obligatorio.");
-            if (string.IsNullOrWhiteSpace(usuario)) errores.Add("El Usuario es obligatorio.");
-            if (string.IsNullOrWhiteSpace(password)) errores.Add("La contraseña es obligatoria.");
-
-            if (!string.IsNullOrWhiteSpace(nombre) && !nombreRegex.IsMatch(nombre))
-                errores.Add("El Nombre contiene caracteres no válidos.");
-            if (!string.IsNullOrWhiteSpace(apellido) && !nombreRegex.IsMatch(apellido))
-                errores.Add("El Apellido  contiene caracteres no válidos.");
-            if (!string.IsNullOrWhiteSpace(usuario) && !usuarioRegex.IsMatch(usuario))
-                errores.Add("El Usuario solo puede contener letras, números, punto, guion y guion bajo.");
-
-            if (errores.Count > 0)
-            {
-                ViewBag.Error = string.Join(" ", errores);
-                return View();
-            }
-
-            var usuarioOcupado =
-                await _db.Clientes.AsNoTracking().AnyAsync(c => c.Usuario == usuario) ||
-                await _db.Empleados.AsNoTracking().AnyAsync(e => e.Usuario == usuario);
-
-            if (usuarioOcupado)
-            {
-                ViewBag.Error = "El nombre de usuario ya está en uso.";
-                return View();
-            }
-
-            var cliente = new Cliente
-            {
-                Nombre = nombre!,
-                Apellido_P = apellido!,
-                Usuario = usuario!,
-                Contraseña = password
-            };
-
-            try
-            {
-                _db.Clientes.Add(cliente);
-                await _db.SaveChangesAsync();
-
-                HttpContext.Session.SetString("Usuario", cliente.Usuario ?? cliente.Nombre);
-                HttpContext.Session.SetString("Rol", "Cliente");
-
-                return RedirectToAction("Index");
-            }
-            catch (DbUpdateException ex)
-            {
-                _logger.LogError(ex, "Error al registrar cliente con usuario {Usuario}", usuario);
-                ViewBag.Error = "Ocurrió un error guardando el usuario. Inténtalo de nuevo.";
-                return View();
-            }
+            return View();
         }
-
-
-        //Registro de empleados
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RegistroEmpleado(string nombre, string apellido, string usuario, string password, string tipoEmpleado)
-        {
-
-            nombre = nombre?.Trim();
-            apellido = apellido?.Trim();
-            usuario = usuario?.Trim();
-            tipoEmpleado = tipoEmpleado?.Trim();
-
-            var nombreRegex = new Regex(@"^[\p{L}\p{M}\s'-]+$");
-            var usuarioRegex = new Regex(@"^[A-Za-z0-9_.-]+$");
-
-            var errores = new List<string>();
-
-            //verificar si todos los campos estan completos
-            if (string.IsNullOrWhiteSpace(nombre)) errores.Add("El Nombre es obligatorio.");
-            if (string.IsNullOrWhiteSpace(apellido)) errores.Add("El Apellido es obligatorio.");
-            if (string.IsNullOrWhiteSpace(usuario)) errores.Add("El Usuario es obligatorio.");
-            if (string.IsNullOrWhiteSpace(password)) errores.Add("La contraseña es obligatoria.");
-
-            //Caracteres validos
-            if (!string.IsNullOrWhiteSpace(nombre) && !nombreRegex.IsMatch(nombre))
-                errores.Add("El Nombre contiene caracteres no válidos.");
-            if (!string.IsNullOrWhiteSpace(apellido) && !nombreRegex.IsMatch(apellido))
-                errores.Add("El Apellido  contiene caracteres no válidos.");
-
-            if (!string.IsNullOrWhiteSpace(usuario) && !usuarioRegex.IsMatch(usuario))
-                errores.Add("El Usuario solo puede contener letras, números, punto, guion y guion bajo.");
-
-            if (errores.Count > 0)
-            {
-                ViewBag.Error = string.Join(" ", errores);
-                return View();
-            }
-
-
-            //Valida si no hay el usuario no existe
-            var usuarioOcupado =
-                await _db.Clientes.AsNoTracking().AnyAsync(c => c.Usuario == usuario) ||
-                await _db.Empleados.AsNoTracking().AnyAsync(e => e.Usuario == usuario);
-
-            if (usuarioOcupado)
-            {
-                ViewBag.Error = "El nombre de usuario ya está en uso.";
-                return View();
-            }
-
-            var empleado = new Empleado
-            {
-                Nombre = nombre!,
-                Apellido_P = apellido!,
-                Usuario = usuario!,
-                Contraseña = password,
-                TipoUsuario = tipoEmpleado!
-            };
-
-            try
-            {
-                _db.Empleados.Add(empleado);
-                await _db.SaveChangesAsync();
-
-
-                return RedirectToAction("Panel");
-            }
-            catch (DbUpdateException ex)
-            {
-                _logger.LogError(ex, "Error al registrar empleado con usuario {Usuario}", usuario);
-                ViewBag.Error = "Ocurrió un error guardando el usuario. Inténtalo de nuevo.";
-                return View();
-            }
-        }
-
-
-
-
 
         // ---------------------------------------------------------------------
         // FUNCIÓN DE CARRITO: Añadir producto (Usa contexto independiente)
         // ---------------------------------------------------------------------
 
-
-        // ====================================================
-        //      CARRITO: AÑADIR (PRODUCTO O PROMOCIÓN)
-        // ====================================================
         [HttpPost]
         public async Task<IActionResult> AddToCart([FromBody] CartRequest request)
         {
             if (request.productId == null || request.productId == Guid.Empty)
             {
-                return Json(new { success = false, message = "ID no especificado." });
+                return Json(new { success = false, message = "ID de producto no especificado." });
             }
 
             HttpContext.Session.SetString("CartInit", "1");
             var sessionId = HttpContext.Session.Id;
+            Guid itemIdGuid = request.productId.Value;
 
             try
             {
                 using (var dbContext = _contextFactory.CreateDbContext())
                 {
-                    // 1) Intentar como PRODUCTO
-                    var producto = await dbContext.Productos
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(p => p.Id == request.productId);
-
+                    var producto = await dbContext.Productos.AsNoTracking().FirstOrDefaultAsync(p => p.Id == itemIdGuid);
                     Promocion? promo = null;
+                    bool isPromo = false;
 
                     if (producto == null)
                     {
-                        // 2) Si no es producto, intentar como PROMOCIÓN
-                        promo = await dbContext.Promociones
-                            .AsNoTracking()
-                            .FirstOrDefaultAsync(p => p.Id == request.productId && p.Activo);
-
+                        promo = await dbContext.Promociones.AsNoTracking().FirstOrDefaultAsync(p => p.Id == itemIdGuid && p.Activo);
                         if (promo == null)
                         {
                             return Json(new { success = false, message = "No se encontró producto ni promoción con ese Id." });
                         }
-
-                        // 🔒 Validar día/hora permitidos para la promo
-                        var ahora = DateTime.Now;
-                        DiasSemana hoyFlag = ahora.DayOfWeek switch
-                        {
-                            DayOfWeek.Monday => DiasSemana.Lunes,
-                            DayOfWeek.Tuesday => DiasSemana.Martes,
-                            DayOfWeek.Wednesday => DiasSemana.Miercoles,
-                            DayOfWeek.Thursday => DiasSemana.Jueves,
-                            DayOfWeek.Friday => DiasSemana.Viernes,
-                            DayOfWeek.Saturday => DiasSemana.Sabado,
-                            DayOfWeek.Sunday => DiasSemana.Domingo,
-                            _ => DiasSemana.Ninguno
-                        };
-                        var horaActual = ahora.TimeOfDay;
-
-                        bool diaOk = promo.DiasPermitidos.HasFlag(hoyFlag);
-                        bool horaOk =
-                            (!promo.HoraInicio.HasValue || promo.HoraInicio.Value <= horaActual) &&
-                            (!promo.HoraFin.HasValue || promo.HoraFin.Value >= horaActual);
-
-                        if (!diaOk || !horaOk)
-                        {
-                            return Json(new
-                            {
-                                success = false,
-                                message = "Esta promoción no está disponible en este día u horario."
-                            });
-                        }
+                        isPromo = true;
                     }
 
                     CarritoItem? cartItem;
+                    Guid? productoId = isPromo ? null : (Guid?)producto!.Id;
+                    Guid? promocionId = isPromo ? promo!.Id : null;
+                    decimal precioUnitario = isPromo ? promo!.Precio : producto!.Precio;
+                    string nombreItem = isPromo ? promo!.Nombre + " (Promo)" : producto!.Nombre;
 
-                    if (producto != null)
+
+                    // 3) Buscar y Consolidar
+                    cartItem = await dbContext.CarritoItems
+                        .FirstOrDefaultAsync(c => c.ProductoId == productoId && c.PromocionId == promocionId && c.SessionId == sessionId);
+
+                    if (cartItem != null)
                     {
-                        // ---- Es un PRODUCTO normal ----
-                        cartItem = await dbContext.CarritoItems
-                            .FirstOrDefaultAsync(c => c.ProductoId == producto.Id && c.SessionId == sessionId);
-
-                        if (cartItem != null)
-                        {
-                            cartItem.Cantidad++;
-                            dbContext.CarritoItems.Update(cartItem);
-                        }
-                        else
-                        {
-                            cartItem = new CarritoItem
-                            {
-                                SessionId = sessionId,
-                                ProductoId = producto.Id,
-                                PromocionId = null,
-                                PrecioUnitario = producto.Precio,
-                                Cantidad = 1
-                            };
-                            dbContext.CarritoItems.Add(cartItem);
-                        }
+                        cartItem.Cantidad++;
+                        dbContext.CarritoItems.Update(cartItem);
                     }
                     else
                     {
-                        // ---- Es una PROMOCIÓN ----
-                        cartItem = await dbContext.CarritoItems
-                            .FirstOrDefaultAsync(c => c.PromocionId == promo!.Id && c.SessionId == sessionId);
-
-                        if (cartItem != null)
+                        cartItem = new CarritoItem
                         {
-                            cartItem.Cantidad++;
-                            dbContext.CarritoItems.Update(cartItem);
-                        }
-                        else
-                        {
-                            cartItem = new CarritoItem
-                            {
-                                SessionId = sessionId,
-                                ProductoId = null,
-                                PromocionId = promo!.Id,
-                                PrecioUnitario = promo.Precio,
-                                Cantidad = 1
-                            };
-                            dbContext.CarritoItems.Add(cartItem);
-                        }
+                            SessionId = sessionId,
+                            ProductoId = productoId,
+                            PromocionId = promocionId,
+                            PrecioUnitario = precioUnitario,
+                            Cantidad = 1
+                        };
+                        dbContext.CarritoItems.Add(cartItem);
                     }
 
                     await dbContext.SaveChangesAsync();
+                    return Json(new { success = true, message = $"{nombreItem} agregado al carrito." });
                 }
-
-                return Json(new { success = true, message = $"Agregado al carrito." });
             }
             catch (Exception ex)
             {
@@ -363,7 +165,6 @@ namespace TiendaDeSnack.Controllers
         [HttpGet]
         public async Task<IActionResult> GetCartItems()
         {
-            HttpContext.Session.SetString("CartInit", "1");
             var sessionId = HttpContext.Session.Id;
 
             using (var dbContext = _contextFactory.CreateDbContext())
@@ -379,40 +180,141 @@ namespace TiendaDeSnack.Controllers
 
                     await transaction.CommitAsync();
 
-                    var carritoData = cartItems.Select(item =>
+                    var carritoData = cartItems.Select(item => new
                     {
-                        var nombre = item.Producto != null
-                            ? item.Producto.Nombre
-                            : item.Promocion != null
-                                ? item.Promocion.Nombre + " (Promo)"
-                                : "Item";
-
-                        return new
-                        {
-                            Id = item.Id,
-                            Nombre = nombre,
-                            Precio = item.PrecioUnitario,
-                            Cantidad = item.Cantidad,
-                            Subtotal = item.PrecioUnitario * item.Cantidad
-                        };
+                        Id = item.Id,
+                        Nombre = item.Producto?.Nombre ?? item.Promocion?.Nombre + " (Promo)" ?? "Item Desconocido",
+                        Precio = item.PrecioUnitario,
+                        Cantidad = item.Cantidad,
+                        Subtotal = item.PrecioUnitario * item.Cantidad
                     }).ToList();
 
-                    decimal subtotal = carritoData.Sum(i => i.Subtotal);
+                    decimal subtotal = carritoData.Sum(item => item.Subtotal);
 
                     return Json(new { items = carritoData, subtotal = subtotal });
                 }
             }
         }
 
-        // ====================================================
-        //   INCREMENTO / DECREMENTO CANTIDAD EN CARRITO
-        // ====================================================
+        // Función auxiliar para cargar el carrito en el ViewModel
+        private async Task<List<CarritoItem>> GetCartItemsForProcessing(string sessionId)
+        {
+            using (var dbContext = _contextFactory.CreateDbContext())
+            {
+                return await dbContext.CarritoItems
+                    .Include(c => c.Producto)
+                    .Include(c => c.Promocion)
+                    .Where(c => c.SessionId == sessionId)
+                    .ToListAsync();
+            }
+        }
+
+        // ---------------------------------------------------------------------
+        // FINALIZAR COMPRA
+        // ---------------------------------------------------------------------
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> FinalizarCompra(FinalizarCompraViewModel model)
+        {
+            // 1. Recargar items del carrito en el modelo antes de validar
+            model.ItemsDelCarrito = await GetCartItemsForProcessing(HttpContext.Session.Id);
+            model.TotalPagar = model.ItemsDelCarrito.Sum(i => i.PrecioUnitario * i.Cantidad);
+
+            // 2. Verificar validaciones y estado del carrito
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Error = "Por favor, corrige los errores en los campos de dirección o pago.";
+                return View("Pedidos", model);
+            }
+
+            if (model.ItemsDelCarrito.Count == 0)
+            {
+                ViewBag.Error = "El carrito está vacío. Vuelve a empezar.";
+                return RedirectToAction("Menu");
+            }
+
+            try
+            {
+                using (var dbContext = _contextFactory.CreateDbContext())
+                {
+                    var nuevaVenta = new Venta
+                    {
+                        Id = Guid.NewGuid(),
+                        Fecha = DateTime.UtcNow,
+                        Total = model.TotalPagar,
+                        ClienteNombre = HttpContext.Session.GetString("Usuario") ?? (model.Nombre ?? "Invitado"),
+                        Estado = "Completada",
+                        CalleNumero = model.CalleNumero,
+                        Ciudad = model.Ciudad,
+                        CodigoPostal = model.CodigoPostal,
+                        MetodoPago = model.MetodoPago
+                    };
+
+                    dbContext.Ventas.Add(nuevaVenta);
+
+                    foreach (var item in model.ItemsDelCarrito)
+                    {
+                        var detalle = new VentaDetalle
+                        {
+                            Id = Guid.NewGuid(),
+                            VentaId = nuevaVenta.Id,
+                            ProductoId = item.ProductoId ?? Guid.Empty,
+                            Cantidad = item.Cantidad,
+                            PrecioUnitario = item.PrecioUnitario,
+                            Subtotal = item.PrecioUnitario * item.Cantidad
+                        };
+                        dbContext.VentasDetalle.Add(detalle);
+                    }
+
+                    // Eliminar items del carrito
+                    dbContext.CarritoItems.RemoveRange(model.ItemsDelCarrito);
+
+                    await dbContext.SaveChangesAsync();
+
+                    // Limpiar la sesión si deseas
+                    HttpContext.Session.Remove("CartInit");
+
+                    var modelConfirm = new FinalizarCompraViewModel
+                    {
+                        OrderId = nuevaVenta.Id,
+                        ItemsDelCarrito = model.ItemsDelCarrito,
+                        TotalPagar = model.TotalPagar,
+                        CalleNumero = model.CalleNumero,
+                        Ciudad = model.Ciudad,
+                        CodigoPostal = model.CodigoPostal,
+                        MetodoPago = model.MetodoPago
+                    };
+
+                    return View("Confirmacion", modelConfirm);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al finalizar la compra para la sesión {SessionId}", HttpContext.Session.Id);
+                ViewBag.Error = "Ocurrió un error al procesar el pago. Inténtalo de nuevo.";
+                model.ItemsDelCarrito = await GetCartItemsForProcessing(HttpContext.Session.Id);
+                return View("Pedidos", model);
+            }
+        }
+
+        // Opcional: Vista de confirmación
+        public IActionResult Confirmacion(Guid orderId)
+        {
+            ViewBag.OrderId = orderId;
+            return View(); // Necesitas crear Views/Home/Confirmacion.cshtml
+        }
+
+
+        // ---------------------------------------------------------------------
+        // FUNCIONES DE INCREMENTO/DECREMENTO CANTIDAD EN CARRITO
+        // ---------------------------------------------------------------------
+
         [HttpPost]
         public async Task<IActionResult> IncrementCartItem([FromBody] CartItemChangeRequest request)
         {
             if (request?.itemId == null || request.itemId == Guid.Empty)
             {
-                _logger.LogWarning("IncrementCartItem called with invalid itemId: {ItemId}", request?.itemId);
                 return Json(new { success = false, message = "ID de item no especificado." });
             }
 
@@ -423,11 +325,9 @@ namespace TiendaDeSnack.Controllers
             {
                 using (var dbContext = _contextFactory.CreateDbContext())
                 {
-                    var item = await dbContext.CarritoItems
-                        .FirstOrDefaultAsync(c => c.Id == request.itemId && c.SessionId == sessionId);
+                    var item = await dbContext.CarritoItems.FirstOrDefaultAsync(c => c.Id == request.itemId && c.SessionId == sessionId);
                     if (item == null)
                     {
-                        _logger.LogWarning("IncrementCartItem: item not found. SessionId={SessionId} ItemId={ItemId}", sessionId, request.itemId);
                         return Json(new { success = false, message = "Item no encontrado." });
                     }
 
@@ -440,7 +340,7 @@ namespace TiendaDeSnack.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al incrementar item del carrito. SessionId={SessionId} ItemId={ItemId}", sessionId, request?.itemId);
+                _logger.LogError(ex, "Error al incrementar item del carrito.");
                 return StatusCode(500, Json(new { success = false, message = "Error interno al incrementar." }));
             }
         }
@@ -450,7 +350,6 @@ namespace TiendaDeSnack.Controllers
         {
             if (request?.itemId == null || request.itemId == Guid.Empty)
             {
-                _logger.LogWarning("DecrementCartItem called with invalid itemId: {ItemId}", request?.itemId);
                 return Json(new { success = false, message = "ID de item no especificado." });
             }
 
@@ -461,11 +360,9 @@ namespace TiendaDeSnack.Controllers
             {
                 using (var dbContext = _contextFactory.CreateDbContext())
                 {
-                    var item = await dbContext.CarritoItems
-                        .FirstOrDefaultAsync(c => c.Id == request.itemId && c.SessionId == sessionId);
+                    var item = await dbContext.CarritoItems.FirstOrDefaultAsync(c => c.Id == request.itemId && c.SessionId == sessionId);
                     if (item == null)
                     {
-                        _logger.LogWarning("DecrementCartItem: item not found. SessionId={SessionId} ItemId={ItemId}", sessionId, request.itemId);
                         return Json(new { success = false, message = "Item no encontrado." });
                     }
 
@@ -486,14 +383,30 @@ namespace TiendaDeSnack.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al decrementar item del carrito. SessionId={SessionId} ItemId={ItemId}", sessionId, request?.itemId);
+                _logger.LogError(ex, "Error al decrementar item del carrito.");
                 return StatusCode(500, Json(new { success = false, message = "Error interno al decrementar." }));
             }
         }
 
-        // ====================================================
-        //   LOGIN / PANEL / LOGOUT
-        // ====================================================
+        // ---------------------------------------------------------------------
+        // MÉTODOS DE AUTENTICACIÓN Y ADMINISTRACIÓN
+        // ---------------------------------------------------------------------
+
+        [HttpGet]
+        public IActionResult RegistroEmpleado() => View();
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RegistroEmpleado(string nombre, string apellido, string usuario, string password, string tipoEmpleado)
+        {
+            using (var dbContext = _contextFactory.CreateDbContext())
+            {
+                // NOTA: La lógica de registro de empleado debe ir aquí
+                return RedirectToAction("Panel"); // Temporal
+            }
+        }
+
+
         [HttpGet]
         public IActionResult Login() => View();
 
@@ -520,8 +433,7 @@ namespace TiendaDeSnack.Controllers
                     return View();
                 }
 
-                var cliente = await dbContext.Clientes.AsNoTracking()
-                    .SingleOrDefaultAsync(c => c.Usuario == usuario);
+                var cliente = await dbContext.Clientes.AsNoTracking().SingleOrDefaultAsync(c => c.Usuario == usuario);
 
                 if (cliente != null && cliente.Contraseña == password)
                 {
@@ -530,8 +442,7 @@ namespace TiendaDeSnack.Controllers
                     return RedirectToAction("Index");
                 }
 
-                var empleado = await dbContext.Empleados.AsNoTracking()
-                    .SingleOrDefaultAsync(e => e.Usuario == usuario);
+                var empleado = await dbContext.Empleados.AsNoTracking().SingleOrDefaultAsync(e => e.Usuario == usuario);
 
                 if (empleado != null && empleado.Contraseña == password)
                 {
@@ -543,7 +454,6 @@ namespace TiendaDeSnack.Controllers
 
                     return RedirectToAction("Index");
                 }
-
                 ViewBag.Error = "Usuario o contraseña incorrectos.";
                 return View();
             }
@@ -562,16 +472,49 @@ namespace TiendaDeSnack.Controllers
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
-    }
 
-    // CLASES AUXILIARES PARA AJAX
-    public class CartRequest
-    {
-        public Guid? productId { get; set; }
-    }
+        // ---------------------------------------------------------------------
+        // NUEVAS ACCIONES Y VISTAS
+        // ---------------------------------------------------------------------
 
-    public class CartItemChangeRequest
-    {
-        public Guid? itemId { get; set; }
+        // Acción para mostrar el formulario de checkout (usada antes por el menú)
+        [HttpGet]
+        public async Task<IActionResult> Checkout()
+        {
+            var sessionId = HttpContext.Session.Id;
+            using (var dbContext = _contextFactory.CreateDbContext())
+            {
+                var cartItems = await dbContext.CarritoItems
+                    .Include(c => c.Producto)
+                    .Include(c => c.Promocion)
+                    .Where(c => c.SessionId == sessionId)
+                    .ToListAsync();
+
+                if (cartItems == null || !cartItems.Any())
+                    return RedirectToAction("Menu");
+
+                var vm = new FinalizarCompraViewModel
+                {
+                    ItemsDelCarrito = cartItems,
+                    TotalPagar = cartItems.Sum(i => i.PrecioUnitario * i.Cantidad)
+                };
+
+                return View("Pedidos", vm); // Reutilizamos la vista Pedidos como formulario de checkout
+            }
+        }
+
+        // ---------------------------------------------------------------------
+        // CLASES AUXILIARES NECESARIAS PARA AJAX
+        // ---------------------------------------------------------------------
+
+        public class CartRequest
+        {
+            public Guid? productId { get; set; }
+        }
+
+        public class CartItemChangeRequest
+        {
+            public Guid? itemId { get; set; }
+        }
     }
 }

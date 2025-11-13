@@ -1,47 +1,162 @@
-﻿@{
-    ViewData["Title"] = "Pedidos";
+﻿@model TiendaDeSnack.Models.FinalizarCompraViewModel
+
+@{
+    ViewData["Title"] = "Finalizar Pedido";
 }
 
-<div class="menu-page-container">
-    @* Reutiliza estilos de espaciado y fondo de menú *@
-    <h1 class="text-center menu-title">¡Realiza tu Pedido!</h1>
-    <p class="text-center menu-subtitle">
-        Aquí podrás ver tus pedidos anteriores o empezar uno nuevo.
-    </p>
+<div class="container py-5">
+    <h1 class="text-center menu-title">Confirmación de Pedido</h1>
 
-    <div class="container text-center py-5">
-        <p class="text-dark fs-5">
-            Actualmente no tienes pedidos activos.
-        </p>
-        <p class="text-dark fs-5">
-            ¡Explora nuestro <a asp-controller="Home" asp-action="Menu" class="text-decoration-none" style="color:#f7d23a; font-weight:bold;">menú</a> para empezar a pedir!
-        </p>
-
-        <div class="mt-5 buttons-container-center">
-            <a asp-controller="Home" asp-action="Menu" class="btn btn-primary btn-custom register-btn">
-                Ver Menú
-            </a>
-            <a href="#" class="btn btn-secondary btn-custom login-btn" style="color: #000; border-color: #000; background-color: transparent;">
-                Mis Pedidos Anteriores
-            </a>
+    @if (Model.ItemsDelCarrito == null || Model.ItemsDelCarrito.Count == 0)
+    {
+        <div class="alert alert-warning text-center mt-4">
+            Tu carrito está vacío. Por favor, agrega productos desde el <a asp-action="Menu">menú</a> para continuar.
         </div>
-    </div>
+
+        <footer class="contact-footer-bar mt-5">
+            <div class="container contact-bar">
+                <p><i class="fab fa-whatsapp"></i> 686 316 0010</p>
+                <p><i class="fab fa-facebook-f"></i> SNACK JR&SP</p>
+            </div>
+        </footer>
+    }
+    else
+    {
+        <form asp-controller="Home" asp-action="FinalizarCompra" method="post" class="row g-4 mt-3">
+
+            @Html.AntiForgeryToken()
+
+            <div class="col-lg-7">
+                <h2 class="mb-4">1. Dirección de Envío</h2>
+                <hr>
+
+                <div class="mb-3">
+                    <label asp-for="CalleNumero" class="form-label"></label>
+                    <input asp-for="CalleNumero" class="form-control" />
+                    <span asp-validation-for="CalleNumero" class="text-danger"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Ciudad" class="form-label"></label>
+                        <input asp-for="Ciudad" class="form-control" />
+                        <span asp-validation-for="Ciudad" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="CodigoPostal" class="form-label"></label>
+                        <input asp-for="CodigoPostal" class="form-control" />
+                        <span asp-validation-for="CodigoPostal" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <h2 class="mt-4 mb-4">2. Método de Pago</h2>
+                <hr>
+
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" asp-for="MetodoPago" value="Efectivo" required />
+                        <label class="form-check-label" for="MetodoPago_Efectivo">Pago en Efectivo (Contra Entrega)</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" asp-for="MetodoPago" value="Tarjeta" required />
+                        <label class="form-check-label" for="MetodoPago_Tarjeta">Tarjeta de Crédito/Débito</label>
+                    </div>
+                    <span asp-validation-for="MetodoPago" class="text-danger"></span>
+                </div>
+
+                <div class="card p-3 mb-4" id="tarjeta-campos" style="display:none;">
+                    <div class="mb-3">
+                        <label asp-for="NumeroTarjeta" class="form-label"></label>
+                        <input asp-for="NumeroTarjeta" class="form-control" placeholder="1234 5678 9012 3456" />
+                        <span asp-validation-for="NumeroTarjeta" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3 w-50">
+                        <label asp-for="CVV" class="form-label"></label>
+                        <input asp-for="CVV" class="form-control" placeholder="123" />
+                        <span asp-validation-for="CVV" class="text-danger"></span>
+                    </div>
+                </div>
+
+                @for (int i = 0; i < Model.ItemsDelCarrito.Count; i++)
+                {
+                    // Necesitamos enviar los datos del carrito de vuelta al POST para procesar la venta
+                    // Enviamos el ID, ProductoId y Cantidad
+                    <input type="hidden" asp-for="ItemsDelCarrito[i].Id" />
+                    <input type="hidden" asp-for="ItemsDelCarrito[i].ProductoId" />
+                    <input type="hidden" asp-for="ItemsDelCarrito[i].Cantidad" />
+                    <input type="hidden" asp-for="ItemsDelCarrito[i].PrecioUnitario" />
+                }
+
+
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card shadow-sm p-4 bg-light sticky-top" style="top: 80px;">
+                    <h3 class="card-title">Resumen del Pedido</h3>
+                    <ul class="list-group list-group-flush mb-3">
+                        @foreach (var item in Model.ItemsDelCarrito)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                @* Se usa el operador de coalescencia para promociones *@
+                                <span>@item.Cantidad x @(item.Producto?.Nombre ?? item.Promocion?.Nombre ?? "Item Desconocido")</span>
+                                <span>$@((item.PrecioUnitario * item.Cantidad).ToString("N2"))</span>
+                            </li>
+                        }
+                    </ul>
+                    <div class="d-flex justify-content-between fw-bold fs-5 mt-2 border-top pt-2">
+                        <span>TOTAL:</span>
+                        <span>$@Model.TotalPagar.ToString("N2")</span>
+                    </div>
+
+                    <button type="submit" class="btn btn-warning btn-lg mt-4 fw-bold register-btn">
+                        Pagar y Finalizar
+                    </button>
+                    <a asp-action="Menu" class="btn btn-outline-secondary mt-2 login-btn" style="color: #000; border-color: #000;">Volver al Menú</a>
+                </div>
+            </div>
+
+        </form>
+
+        <footer class="contact-footer-bar mt-5">
+            <div class="container contact-bar">
+                <p><i class="fab fa-whatsapp"></i> 686 316 0010</p>
+                <p><i class="fab fa-facebook-f"></i> SNACK JR&SP</p>
+            </div>
+        </footer>
+    }
 </div>
 
-<footer class="contact-footer-bar">
-    <div class="container contact-bar">
-        <p><i class="fab fa-whatsapp"></i> 686 316 0010</p>
-        <p><i class="fab fa-facebook-f"></i> SNACK JR&SP</p>
-    </div>
-</footer>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Lógica para mostrar/ocultar campos de tarjeta (mejora de UX)
+        document.addEventListener('DOMContentLoaded', function () {
+            const metodoPagoRadios = document.querySelectorAll('input[name="MetodoPago"]');
+            const tarjetaCampos = document.getElementById('tarjeta-campos');
 
-<style>
-    /* Estilos específicos para esta página (Asegúrate de que este CSS esté también en site.css) */
-    .buttons-container-center {
-        display: flex;
-        justify-content: center;
-        gap: 20px;
-    }
+            function toggleTarjetaFields() {
+                // Si la página se está cargando después de un error de validación, el radio ya está marcado
+                const isTarjeta = document.querySelector('input[name="MetodoPago"]:checked')?.value === 'Tarjeta';
 
-    /* El estilo de los botones register-btn y login-btn viene de site.css */
-</style>
+                // Muestra u oculta la tarjeta
+                tarjetaCampos.style.display = isTarjeta ? 'block' : 'none';
+
+                // Si la tarjeta NO está seleccionada, hacemos que sus campos NO sean requeridos
+                // para que la validación no falle si eligen Efectivo.
+                const requiredFields = tarjetaCampos.querySelectorAll('input');
+                requiredFields.forEach(input => {
+                    if (isTarjeta) {
+                        input.setAttribute('required', '');
+                    } else {
+                        input.removeAttribute('required');
+                    }
+                });
+            }
+
+            metodoPagoRadios.forEach(radio => radio.addEventListener('change', toggleTarjetaFields));
+
+            // Usar setTimeout para asegurar que se ejecuta DESPUÉS de que Razor actualiza los campos
+            setTimeout(toggleTarjetaFields, 50);
+        });
+    </script>
+}

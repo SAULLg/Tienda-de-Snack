@@ -36,13 +36,13 @@
 
                 @if (esAdmin)
                 {
-                    <a class="navbar-brand-logo" asp-controller="Home" asp-action="Panel">
+                    <a class="navbar-brand-logo" href="@Url.Action("Panel", "Home")">
                         <img src="~/images/logo.jpg" alt="SNACK JR&SP Logo" class="logo">
                     </a>
                 }
                 else
                 {
-                    <a class="navbar-brand-logo" asp-controller="Home" asp-action="Index">
+                    <a class="navbar-brand-logo" href="@Url.Action("Index", "Home")">
                         <img src="~/images/logo.jpg" alt="SNACK JR&SP Logo" class="logo">
                     </a>
                 }
@@ -59,42 +59,42 @@
                         {
                             <li class="nav-item">
                                 <a class="nav-link text-light @(activeInicio ? "active-link" : "")"
-                                   asp-controller="Home" asp-action="Panel">Inicio</a>
+                                   href="@Url.Action("Panel", "Home")">Inicio</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link text-light @(activeProductos ? "active-link" : "")"
-                                   asp-controller="AdminProductos" asp-action="Index">Productos</a>
+                                   href="@Url.Action("Index", "AdminProductos")">Productos</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link text-light @(activeEmpleados ? "active-link" : "")"
-                                   asp-controller="Home" asp-action="Panel" asp-route-tab="Empleados">Empleados</a>
+                                   href="@Url.Action("Panel", "Home", new { tab = "Empleados" })">Empleados</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link text-light @(activePedidos ? "active-link" : "")"
-                                   asp-controller="Home" asp-action="Panel" asp-route-tab="Pedidos">Pedidos</a>
+                                   href="@Url.Action("Panel", "Home", new { tab = "Pedidos" })">Pedidos</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link text-light @(activeRepartidores ? "active-link" : "")"
-                                   asp-controller="Home" asp-action="Panel" asp-route-tab="Repartidores">Repartidores</a>
+                                   href="@Url.Action("Panel", "Home", new { tab = "Repartidores" })">Repartidores</a>
                             </li>
                         }
                         else
                         {
                             <li class="nav-item">
                                 <a class="nav-link text-light @(currentController == "Home" && currentAction == "Index" ? "active-link" : "")"
-                                   asp-controller="Home" asp-action="Index">Inicio</a>
+                                   href="@Url.Action("Index", "Home")">Inicio</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link text-light @(currentController == "Home" && currentAction == "Menu" ? "active-link" : "")"
-                                   asp-controller="Home" asp-action="Menu">Menu</a>
+                                   href="@Url.Action("Menu", "Home")">Menu</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link text-light @(currentController == "Home" && currentAction == "Pedidos" ? "active-link" : "")"
-                                   asp-controller="Home" asp-action="Pedidos">Pedidos</a>
+                                   href="@Url.Action("Pedidos", "Home")">Pedidos</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link text-light @(currentController == "Home" && currentAction == "Resenas" ? "active-link" : "")"
-                                   asp-controller="Home" asp-action="Resenas">Reseñas</a>
+                                   href="@Url.Action("Resenas", "Home")">Reseñas</a>
                             </li>
                         }
                     </ul>
@@ -116,7 +116,7 @@
                                aria-controls="#offcanvasCarrito">
                                 <i class="fas fa-shopping-cart"></i>
                             </a>
-                            <a class="nav-icon-link profile-icon-lg" asp-controller="Home" asp-action="Login">
+                            <a class="nav-icon-link profile-icon-lg" href="@Url.Action("Login", "Home")">
                                 <i class="fas fa-user-circle"></i>
                             </a>
                         }
@@ -154,7 +154,7 @@
                     <span>Subtotal:</span>
                     <span id="carrito-subtotal">$0.00</span>
                 </div>
-                <button class="btn btn-warning w-100 fw-bold" type="button">Proceder al Pago</button>
+                <a class="btn btn-warning w-100 fw-bold" href="@Url.Action("Checkout", "Home")">Proceder al Pago</a>
             </div>
         </div>
     </div>
@@ -162,7 +162,6 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
-
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

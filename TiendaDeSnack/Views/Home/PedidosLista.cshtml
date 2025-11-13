@@ -1,0 +1,54 @@
+@model List<TiendaDeSnack.Models.Venta> 
+{{-- Asegúrate que el modelo sea List<Venta> para esta vista --}}
+
+@{
+    ViewData["Title"] = "Mis Pedidos";
+}
+
+<div class="container py-5">
+    <h1 class="text-center menu-title">Historial de Pedidos</h1>
+
+    @if (Model == null || !Model.Any())
+    {
+        <div class="alert alert-info text-center">No tienes pedidos aún. Explora el <a asp-action="Menu">Menú</a> para realizar uno.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>ID Pedido</th>
+                        
+                        <th>Total</th>
+                        <th>Estado</th>
+                        <th>Detalles del Pedido</th> 
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var venta in Model)
+                    {
+                        <tr>
+                            <td>@venta.Id.ToString().Substring(0, 8)</td>
+                            <td>$@venta.Total.ToString("N2")</td>
+                            <td>@venta.Estado</td>
+                            <td>
+                                {{-- ?? NUEVA LÓGICA: Mostrar solo Nombre y Precio de los Detalle --}}
+                                <ul>
+                                    @foreach (var detalle in venta.Detalles)
+                                    {
+                                        
+                                        <li>
+                                            @detalle.Cantidad x @(detalle.Producto?.Nombre ?? "Promoción/Item") 
+                                            ($@detalle.Subtotal.ToString("N2"))
+                                        </li>
+                                    }
+                                </ul>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

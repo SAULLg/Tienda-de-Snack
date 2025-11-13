@@ -1,0 +1,32 @@
+@model TiendaDeSnack.Models.FinalizarCompraViewModel
+
+@{
+    ViewData["Title"] = "Confirmación de Pedido";
+}
+
+<div class="container py-5">
+    <h1 class="text-center menu-title">Pedido Enviado</h1>
+
+    @if (Model?.OrderId == null)
+    {
+        <div class="alert alert-warning">No se encontró el Id de la orden. Si ya completaste el pago, revisa tus pedidos en el panel.</div>
+    }
+    else
+    {
+        <div class="card p-4">
+            <h3>Gracias por tu compra</h3>
+            <p>Tu número de pedido es: <strong>@Model.OrderId</strong></p>
+            <p>Subtotal: <strong>$@Model.TotalPagar.ToString("N2")</strong></p>
+
+            <h5 class="mt-3">Items:</h5>
+            <ul>
+                @foreach(var item in Model.ItemsDelCarrito)
+                {
+                    <li>@item.Cantidad x @(item.Producto?.Nombre ?? item.Promocion?.Nombre ?? "Item Desconocido") - $@(item.PrecioUnitario * item.Cantidad).ToString("N2")</li>
+                }
+            </ul>
+
+            <a asp-action="Index" class="btn btn-primary mt-3">Volver al Inicio</a>
+        </div>
+    }
+</div>

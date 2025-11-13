@@ -15,10 +15,20 @@ namespace TiendaDeSnack.Models
         public Guid? EmpleadoId { get; set; }
         public Empleado? Empleado { get; set; }
 
-        [Column(TypeName = "decimal(10,2)")]
-        public decimal Total { get; set; }
+        [Column(TypeName = "decimal(10,2)")] public decimal Total { get; set; }
 
         public List<VentaDetalle> Detalles { get; set; } = new();
+
+        public string Estado { get; set; } = string.Empty;
+
+        // Shipping / Payment info
+        [MaxLength(200)] public string? CalleNumero { get; set; }
+
+        [MaxLength(100)] public string? Ciudad { get; set; }
+
+        [MaxLength(20)] public string? CodigoPostal { get; set; }
+
+        [MaxLength(50)] public string? MetodoPago { get; set; }
     }
 
     public class VentaDetalle
@@ -33,10 +43,8 @@ namespace TiendaDeSnack.Models
 
         public int Cantidad { get; set; }
 
-        [Column(TypeName = "decimal(10,2)")]
-        public decimal PrecioUnitario { get; set; }
+        [Column(TypeName = "decimal(10,2)")] public decimal PrecioUnitario { get; set; }
 
-        [Column(TypeName = "decimal(10,2)")]
-        public decimal Subtotal { get; set; }
+        [Column(TypeName = "decimal(10,2)")] public decimal Subtotal { get; set; }
     }
 }
