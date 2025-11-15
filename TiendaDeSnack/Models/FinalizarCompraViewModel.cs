@@ -56,5 +56,9 @@ namespace TiendaDeSnack.Models
 
         [StringLength(4, MinimumLength = 3, ErrorMessage = "El CVV debe tener 3 o 4 dígitos.")]
         public string? CVV { get; set; }
+
+        public bool CompraFinalizada { get; set; } = false;
+        public Venta? VentaCreada { get; set; }
+        
     }
 }

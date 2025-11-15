@@ -303,6 +303,7 @@ namespace TiendaDeSnack.Controllers
         // Opcional: Vista de confirmación
         public IActionResult Confirmacion(Guid orderId)
         {
+
             ViewBag.OrderId = orderId;
             return View(); // Necesitas crear Views/Home/Confirmacion.cshtml
         }
