@@ -22,7 +22,6 @@ namespace TiendaDeSnack.Models
         // II. DATOS DEL ENVÍO (Capturados del formulario [HttpPost])
         // ----------------------------------------------------
 
-        [Required(ErrorMessage = "El nombre es obligatorio.")]
         [StringLength(100)]
         [Display(Name = "Nombre completo")]
         public string Nombre { get; set; } = string.Empty;

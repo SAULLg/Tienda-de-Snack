@@ -1,32 +1,49 @@
 @model TiendaDeSnack.Models.FinalizarCompraViewModel
-
 @{
-    ViewData["Title"] = "Confirmación de Pedido";
+    ViewData["Title"] = "Pedido Confirmado";
 }
-
 <div class="container py-5">
-    <h1 class="text-center menu-title">Pedido Enviado</h1>
+    <h1 class="text-center">¡Gracias por tu compra!</h1>
 
-    @if (Model?.OrderId == null)
-    {
-        <div class="alert alert-warning">No se encontró el Id de la orden. Si ya completaste el pago, revisa tus pedidos en el panel.</div>
-    }
-    else
-    {
-        <div class="card p-4">
-            <h3>Gracias por tu compra</h3>
-            <p>Tu número de pedido es: <strong>@Model.OrderId</strong></p>
-            <p>Subtotal: <strong>$@Model.TotalPagar.ToString("N2")</strong></p>
+    <div class="alert alert-success mt-4">
+        <strong>Tu pedido se registró correctamente.</strong><br />
+        Número de Pedido: <span class="fw-bold">@Model.OrderId</span>
+    </div>
 
-            <h5 class="mt-3">Items:</h5>
-            <ul>
-                @foreach(var item in Model.ItemsDelCarrito)
-                {
-                    <li>@item.Cantidad x @(item.Producto?.Nombre ?? item.Promocion?.Nombre ?? "Item Desconocido") - $@(item.PrecioUnitario * item.Cantidad).ToString("N2")</li>
-                }
-            </ul>
+    <h3 class="mt-4">Resumen</h3>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Producto/Promo</th>
+                <th>Cant.</th>
+                <th>Precio Unit.</th>
+                <th>Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.ItemsDelCarrito)
+            {
+                <tr>
+                    <td>@(item.Producto?.Nombre ?? item.Promocion?.Nombre ?? "Item")</td>
+                    <td>@item.Cantidad</td>
+                    <td>$@item.PrecioUnitario.ToString("N2")</td>
+                    <td>$@((item.PrecioUnitario * item.Cantidad).ToString("N2"))</td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr class="fw-bold">
+                <td colspan="3" class="text-end">Total:</td>
+                <td>$@Model.TotalPagar.ToString("N2")</td>
+            </tr>
+        </tfoot>
+    </table>
 
-            <a asp-action="Index" class="btn btn-primary mt-3">Volver al Inicio</a>
-        </div>
-    }
+    <h4 class="mt-4">Datos de envío</h4>
+    <p>
+        Dirección: @Model.CalleNumero, @Model.Ciudad, CP: @Model.CodigoPostal<br />
+        Método de pago: @Model.MetodoPago
+    </p>
+
+    <a asp-action="Menu" class="btn btn-warning">Seguir comprando</a>
 </div>

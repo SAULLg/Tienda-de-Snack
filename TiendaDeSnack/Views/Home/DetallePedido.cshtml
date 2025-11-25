@@ -1,0 +1,31 @@
+﻿@model TiendaDeSnack.Models.Venta
+@{
+    ViewData["Title"] = "Detalle Pedido";
+}
+
+<div class="container py-5">
+    <h1>Pedido @Model.Id</h1>
+    <p><strong>Fecha:</strong> @Model.Fecha.ToLocalTime()</p>
+    <p><strong>Estado:</strong> @Model.Estado</p>
+    <p><strong>Total:</strong> $@Model.Total.ToString("N2")</p>
+
+    <h4 class="mt-4">Ítems</h4>
+    <table class="table">
+        <thead>
+            <tr><th>Producto</th><th>Cant.</th><th>Precio Unit.</th><th>Subtotal</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var d in Model.Detalles)
+            {
+                <tr>
+                    <td>@d.Producto?.Nombre</td>
+                    <td>@d.Cantidad</td>
+                    <td>$@d.PrecioUnitario.ToString("N2")</td>
+                    <td>$@d.Subtotal.ToString("N2")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <a asp-action="MisPedidos" class="btn btn-secondary">Volver</a>
+</div>

@@ -89,8 +89,8 @@
                                    href="@Url.Action("Menu", "Home")">Menu</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-light @(currentController == "Home" && currentAction == "Pedidos" ? "active-link" : "")"
-                                   href="@Url.Action("Pedidos", "Home")">Pedidos</a>
+                                <a class="nav-link text-light @(currentController == "Home" && currentAction == "MisPedidos" ? "active-link" : "")"
+                                   asp-controller="Home" asp-action="MisPedidos">Mis pedidos</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link text-light @(currentController == "Home" && currentAction == "Resenas" ? "active-link" : "")"

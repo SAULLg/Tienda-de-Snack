@@ -219,11 +219,27 @@ namespace TiendaDeSnack.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> FinalizarCompra(FinalizarCompraViewModel model)
         {
-            // 1. Recargar items del carrito en el modelo antes de validar
             model.ItemsDelCarrito = await GetCartItemsForProcessing(HttpContext.Session.Id);
             model.TotalPagar = model.ItemsDelCarrito.Sum(i => i.PrecioUnitario * i.Cantidad);
 
-            // 2. Verificar validaciones y estado del carrito
+            // 2) Obtener el nombre desde dbo.Clientes con el usuario en sesión (sin tocar el checkout)
+            var usuario = HttpContext.Session.GetString("Usuario");
+            if (!string.IsNullOrWhiteSpace(usuario) && string.IsNullOrWhiteSpace(model.Nombre))
+            {
+                using (var lookupDb = _contextFactory.CreateDbContext())
+                {
+                    var cliente = await lookupDb.Clientes.AsNoTracking().FirstOrDefaultAsync(c => c.Usuario == usuario);
+                    if (cliente != null)
+                    {
+                        // Usa Nombre + Apellido_P si existe
+                        model.Nombre = string.IsNullOrWhiteSpace(cliente.Apellido_P)
+                            ? cliente.Nombre
+                            : $"{cliente.Nombre} {cliente.Apellido_P}";
+                    }
+                }
+            }
+
+            // 3) Validaciones y estado del carrito
             if (!ModelState.IsValid)
             {
                 ViewBag.Error = "Por favor, corrige los errores en los campos de dirección o pago.";
@@ -245,7 +261,8 @@ namespace TiendaDeSnack.Controllers
                         Id = Guid.NewGuid(),
                         Fecha = DateTime.UtcNow,
                         Total = model.TotalPagar,
-                        ClienteNombre = HttpContext.Session.GetString("Usuario") ?? (model.Nombre ?? "Invitado"),
+                        // Prioriza el nombre obtenido de Clientes; si no, el usuario; si no, "Invitado"
+                        ClienteNombre = model.Nombre ?? usuario ?? "Invitado",
                         Estado = "Completada",
                         CalleNumero = model.CalleNumero,
                         Ciudad = model.Ciudad,
@@ -270,11 +287,14 @@ namespace TiendaDeSnack.Controllers
                     }
 
                     // Eliminar items del carrito
-                    dbContext.CarritoItems.RemoveRange(model.ItemsDelCarrito);
+                    // Recomendación: reconsultar dentro del mismo contexto por Ids para evitar tracking cruzado
+                    var ids = model.ItemsDelCarrito.Select(i => i.Id).ToList();
+                    var itemsToDelete = await dbContext.CarritoItems.Where(c => ids.Contains(c.Id)).ToListAsync();
+                    dbContext.CarritoItems.RemoveRange(itemsToDelete);
 
                     await dbContext.SaveChangesAsync();
 
-                    // Limpiar la sesión si deseas
+                    // Limpiar la sesión (opcional)
                     HttpContext.Session.Remove("CartInit");
 
                     var modelConfirm = new FinalizarCompraViewModel
@@ -308,6 +328,48 @@ namespace TiendaDeSnack.Controllers
             return View(); // Necesitas crear Views/Home/Confirmacion.cshtml
         }
 
+        [HttpGet]
+        public async Task<IActionResult> MisPedidos()
+        {
+            var usuario = HttpContext.Session.GetString("Usuario");
+            if (string.IsNullOrWhiteSpace(usuario))
+                return RedirectToAction("Login"); // Ajusta si tu ruta de login es otra
+
+            using (var dbContext = _contextFactory.CreateDbContext())
+            {
+                // Filtras por el valor que guardaste en ClienteNombre al crear la venta.
+                var pedidos = await dbContext.Ventas
+                    .Where(v => v.ClienteNombre == usuario)
+                    .OrderByDescending(v => v.Fecha)
+                    .Include(v => v.Detalles)
+                    .ThenInclude(d => d.Producto)
+                    .ToListAsync();
+
+                return View(pedidos);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DetallePedido(Guid id)
+        {
+            var usuario = HttpContext.Session.GetString("Usuario");
+            using (var dbContext = _contextFactory.CreateDbContext())
+            {
+                var venta = await dbContext.Ventas
+                    .Include(v => v.Detalles)
+                    .ThenInclude(d => d.Producto)
+                    .FirstOrDefaultAsync(v => v.Id == id);
+
+                if (venta == null) return NotFound();
+
+                // Seguridad básica: solo dueño o admin
+                var esAdmin = HttpContext.Session.GetString("Rol") == "Admin";
+                if (!esAdmin && venta.ClienteNombre != usuario)
+                    return Forbid();
+
+                return View(venta);
+            }
+        }
 
         // ---------------------------------------------------------------------
         // FUNCIONES DE INCREMENTO/DECREMENTO CANTIDAD EN CARRITO
@@ -554,6 +616,24 @@ namespace TiendaDeSnack.Controllers
 
             ViewBag.Tab = string.IsNullOrWhiteSpace(tab) ? "Productos" : tab;
             return View("Panel");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ActualizarEstadoPedido(Guid id, string estado)
+        {
+            using (var dbContext = _contextFactory.CreateDbContext())
+            {
+                var venta = await dbContext.Ventas.FirstOrDefaultAsync(v => v.Id == id);
+                if (venta == null) return NotFound();
+
+                var estadosValidos = new[] { "Preparando", "Enviado", "Entregado", "Cancelado" };
+                if (!estadosValidos.Contains(estado)) return BadRequest("Estado no válido.");
+
+                venta.Estado = estado;
+                await dbContext.SaveChangesAsync();
+            }
+
+            return RedirectToAction("Panel", new { tab = "Pedidos" });
         }
 
         [HttpPost]

@@ -2,6 +2,7 @@
     ViewData["Title"] = "Panel de administración";
     var usuario = Context.Session.GetString("Usuario");
     var tab = (ViewBag.Tab as string ?? "Productos").ToLower(); // productos | empleados | pedidos | repartidores
+    var pedidos = ViewBag.Pedidos as List<TiendaDeSnack.Models.Venta>;
 }
 
 <!-- ========= HERO (idéntico al Inicio) ========= -->
@@ -12,8 +13,7 @@
             <p style="color:#FFD700; font-weight:600; font-size:1.3em; margin-top:25px;">
                 Hola, @usuario
             </p>
-        </div>
-
+        </div> 
         <div class="snack-image-circle"></div>
 
         <div class="contact-info-panel">
@@ -80,34 +80,50 @@
     @* ---------- Pedidos ---------- *@
     else if (tab == "pedidos")
     {
-        <h2 class="text-center" style="color:#FFD700;">Pedidos</h2>
-        <p class="text-center text-light mb-3">Revisa y administra pedidos en curso.</p>
-
-        <div class="table-responsive" style="background:#000; border:2px solid #FFD700; border-radius:12px;">
-            <table class="table table-dark table-striped mb-0">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Cliente</th>
-                        <th>Estado</th>
-                        <th>Total</th>
-                        <th style="width:160px;"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>000123</td>
-                        <td>SoniaO</td>
-                        <td>Preparando</td>
-                        <td>$225.00</td>
-                        <td>
-                            <button class="btn btn-sm btn-warning">Ver</button>
-                            <button class="btn btn-sm btn-secondary">Asignar repartidor</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+       @if (pedidos == null || pedidos.Count == 0)
+{
+    <div class="alert alert-info">No hay pedidos registrados todavía.</div>
+}
+else
+{
+    <div class="table-responsive" style="background:#000; border:2px solid #FFD700; border-radius:12px;">
+        <table class="table table-dark table-striped mb-0">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Cliente (Nombre/Usuario)</th>
+                    <th>Estado</th>
+                    <th>Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var p in pedidos)
+            {
+                <tr>
+                    <td>@p.Fecha.ToLocalTime()</td>
+                    <td>@p.ClienteNombre</td>
+                    <td>@p.Estado</td>
+                    <td>$@p.Total.ToString("N2")</td>
+                    <td>
+                        <a asp-action="DetallePedido" asp-route-id="@p.Id" class="btn btn-sm btn-warning">Ver</a>
+                        <form asp-action="ActualizarEstadoPedido" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@p.Id" />
+                            <select name="estado" class="form-select form-select-sm d-inline w-auto">
+                              <option value="Preparando" selected="@(p.Estado == "Preparando" ? "selected" : null)">Preparando</option>
+                              <option value="Enviado" selected="@(p.Estado == "Enviado" ? "selected" : null)">Enviado</option>
+                              <option value="Entregado" selected="@(p.Estado == "Entregado" ? "selected" : null)">Entregado</option>
+                              <option value="Cancelado" selected="@(p.Estado == "Cancelado" ? "selected" : null)">Cancelado</option>
+                            </select>
+                            <button class="btn btn-sm btn-secondary ms-1">Actualizar</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
     }
 
     @* ---------- Repartidores ---------- *@

@@ -40,6 +40,9 @@ namespace TiendaDeSnack.Data
               .HasOne(c => c.Producto).WithMany()
               .HasForeignKey(c => c.ProductoId);
 
+            mb.Entity<Venta>().ToTable("Ventas");
+            mb.Entity<VentaDetalle>().ToTable("VentasDetalle");
+
             SeedData(mb);
 
             base.OnModelCreating(mb);

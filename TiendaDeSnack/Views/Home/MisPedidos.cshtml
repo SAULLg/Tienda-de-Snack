@@ -1,0 +1,45 @@
+﻿@model List<TiendaDeSnack.Models.Venta>
+@{
+    ViewData["Title"] = "Mis Pedidos";
+}
+<div class="container py-5">
+    <h1 class="text-center">Mis Pedidos</h1>
+
+    @if (Model == null || Model.Count == 0)
+
+    {
+        <div class="alert alert-info mt-4">
+            Aún no tienes pedidos registrados.
+        </div>
+        <a asp-action="Menu" class="btn btn-warning">Ir al Menú</a>
+    }
+
+    else
+
+    {
+        <table class="table table-hover mt-4">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th>Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var v in Model)
+
+                {
+                    <tr>
+                        <td>@v.Fecha.ToLocalTime()</td>
+                        <td>@v.Estado</td>
+                        <td>$@v.Total.ToString("N2")</td>
+                        <td>
+                            <a asp-action="DetallePedido" asp-route-id="@v.Id" class="btn btn-sm btn-secondary">Ver</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div></div>
