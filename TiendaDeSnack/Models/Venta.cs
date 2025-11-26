@@ -10,6 +10,8 @@ namespace TiendaDeSnack.Models
         [Key] public Guid Id { get; set; } = Guid.NewGuid();
         public DateTime Fecha { get; set; } = DateTime.UtcNow;
 
+        [MaxLength(80)] public string? ClienteUsuario { get; set; }
+
         [MaxLength(120)] public string? ClienteNombre { get; set; }
 
         public Guid? EmpleadoId { get; set; }

@@ -222,8 +222,10 @@ namespace TiendaDeSnack.Controllers
             model.ItemsDelCarrito = await GetCartItemsForProcessing(HttpContext.Session.Id);
             model.TotalPagar = model.ItemsDelCarrito.Sum(i => i.PrecioUnitario * i.Cantidad);
 
-            // 2) Obtener el nombre desde dbo.Clientes con el usuario en sesión (sin tocar el checkout)
             var usuario = HttpContext.Session.GetString("Usuario");
+
+            // 2) Obtener el nombre desde dbo.Clientes con el usuario en sesión (sin tocar el checkout)
+           
             if (!string.IsNullOrWhiteSpace(usuario) && string.IsNullOrWhiteSpace(model.Nombre))
             {
                 using (var lookupDb = _contextFactory.CreateDbContext())
@@ -256,12 +258,13 @@ namespace TiendaDeSnack.Controllers
             {
                 using (var dbContext = _contextFactory.CreateDbContext())
                 {
+                    
                     var nuevaVenta = new Venta
                     {
                         Id = Guid.NewGuid(),
                         Fecha = DateTime.UtcNow,
                         Total = model.TotalPagar,
-                        // Prioriza el nombre obtenido de Clientes; si no, el usuario; si no, "Invitado"
+                        ClienteUsuario = usuario,
                         ClienteNombre = model.Nombre ?? usuario ?? "Invitado",
                         Estado = "Completada",
                         CalleNumero = model.CalleNumero,
@@ -339,7 +342,7 @@ namespace TiendaDeSnack.Controllers
             {
                 // Filtras por el valor que guardaste en ClienteNombre al crear la venta.
                 var pedidos = await dbContext.Ventas
-                    .Where(v => v.ClienteNombre == usuario)
+                    .Where(v => v.ClienteUsuario == usuario)
                     .OrderByDescending(v => v.Fecha)
                     .Include(v => v.Detalles)
                     .ThenInclude(d => d.Producto)

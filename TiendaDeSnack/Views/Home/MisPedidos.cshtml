@@ -5,6 +5,14 @@
 <div class="container py-5">
     <h1 class="text-center">Mis Pedidos</h1>
 
+    @if (TempData["PedidoOk"] != null)
+
+    {
+        <div class="alert alert-success">
+            Pedido @TempData["PedidoOk"] registrado correctamente.
+        </div>
+    }
+
     @if (Model == null || Model.Count == 0)
 
     {
@@ -32,7 +40,7 @@
                 {
                     <tr>
                         <td>@v.Fecha.ToLocalTime()</td>
-                        <td>@v.Estado</td>
+                        <td>@(string.IsNullOrWhiteSpace(v.Estado) ? "Completada" : v.Estado)</td>
                         <td>$@v.Total.ToString("N2")</td>
                         <td>
                             <a asp-action="DetallePedido" asp-route-id="@v.Id" class="btn btn-sm btn-secondary">Ver</a>
@@ -42,4 +50,4 @@
             </tbody>
         </table>
     }
-</div></div>
+</div>
