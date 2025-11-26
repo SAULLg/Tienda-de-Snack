@@ -374,6 +374,32 @@ namespace TiendaDeSnack.Controllers
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActualizarEstadoPedido(Guid id, string estado)
+        {
+            var rol = HttpContext.Session.GetString("Rol");
+            if (!string.Equals(rol, "Admin", StringComparison.OrdinalIgnoreCase))
+                return Forbid();
+
+            var estadosValidos = new[] { "Preparando", "Enviado", "Entregado", "Cancelado", "Completada" };
+
+
+            if (!estadosValidos.Contains(estado))
+                return BadRequest("Estado no válido.");
+
+            using (var dbContext = _contextFactory.CreateDbContext())
+            {
+                var venta = await dbContext.Ventas.FirstOrDefaultAsync(v => v.Id == id);
+                if (venta == null) return NotFound();
+
+                venta.Estado = estado;
+                await dbContext.SaveChangesAsync();
+            }
+
+            return RedirectToAction("Panel", new { tab = "Pedidos" });
+        }
+
         // ---------------------------------------------------------------------
         // FUNCIONES DE INCREMENTO/DECREMENTO CANTIDAD EN CARRITO
         // ---------------------------------------------------------------------
@@ -617,27 +643,25 @@ namespace TiendaDeSnack.Controllers
             if (!string.Equals(rol, "Admin", StringComparison.OrdinalIgnoreCase))
                 return RedirectToAction("Index");
 
-            ViewBag.Tab = string.IsNullOrWhiteSpace(tab) ? "Productos" : tab;
+            tab = string.IsNullOrWhiteSpace(tab) ? "Productos" : tab;
+            ViewBag.Tab = tab;
+
+            if (string.Equals(tab, "Pedidos", StringComparison.OrdinalIgnoreCase))
+            {
+                using (var dbContext = _contextFactory.CreateDbContext())
+                {
+                    var pedidos = dbContext.Ventas
+                        .OrderByDescending(v => v.Fecha)
+                        .ToList();
+
+                    ViewBag.Pedidos = pedidos;
+
+                }
+                    
+            }
             return View("Panel");
         }
 
-        [HttpPost]
-        public async Task<IActionResult> ActualizarEstadoPedido(Guid id, string estado)
-        {
-            using (var dbContext = _contextFactory.CreateDbContext())
-            {
-                var venta = await dbContext.Ventas.FirstOrDefaultAsync(v => v.Id == id);
-                if (venta == null) return NotFound();
-
-                var estadosValidos = new[] { "Preparando", "Enviado", "Entregado", "Cancelado" };
-                if (!estadosValidos.Contains(estado)) return BadRequest("Estado no válido.");
-
-                venta.Estado = estado;
-                await dbContext.SaveChangesAsync();
-            }
-
-            return RedirectToAction("Panel", new { tab = "Pedidos" });
-        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
