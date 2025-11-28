@@ -11,18 +11,16 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Data;
 using TiendaDeSnack.ViewModels;
-using System.Threading.Tasks; // Agregado para usar Task
+using System.Threading.Tasks;
 
 namespace TiendaDeSnack.Controllers
 {
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
-        // Inyección del Factory
         private readonly IDbContextFactory<AppDbContexto> _contextFactory;
         private readonly AppDbContexto _db;
 
-        // Constructor que recibe el Factory
         public HomeController(ILogger<HomeController> logger, IDbContextFactory<AppDbContexto> contextFactory, AppDbContexto db)
         {
             _logger = logger;
@@ -30,7 +28,6 @@ namespace TiendaDeSnack.Controllers
             _db = db;
         }
 
-        // Página principal (clientes)
         public IActionResult Index()
         {
             ViewBag.Usuario = HttpContext.Session.GetString("Usuario");
@@ -38,25 +35,13 @@ namespace TiendaDeSnack.Controllers
             return View();
         }
 
-        // Carga los productos de la base de datos para la vista de menú
-        public async Task<IActionResult> Menu(string? q)
+        public async Task<IActionResult> Menu()
         {
-
             using (var dbContext = _contextFactory.CreateDbContext())
             {
-                var productosQuery = dbContext.Productos
-                    .Where(p => p.Activo);
-
-                if (!string.IsNullOrWhiteSpace(q))
-                {
-                    var qNorm = q.Trim().ToLower();
-                    productosQuery = productosQuery.Where(p =>
-                        p.Nombre.ToLower().Contains(qNorm) ||
-                        (p.Descripcion != null && p.Descripcion.ToLower().Contains(qNorm))
-                    );
-                }
-
-                var productos = await productosQuery.ToListAsync();
+                var productos = await dbContext.Productos
+                    .Where(p => p.Activo)
+                    .ToListAsync();
 
                 var promociones = await dbContext.Promociones
                     .Where(p => p.Activo)
@@ -68,12 +53,10 @@ namespace TiendaDeSnack.Controllers
                     Promociones = promociones
                 };
 
-                ViewBag.Query = q;
                 return View(viewModel);
             }
         }
 
-        // Carga la vista Pedidos (muestra el checkout con el modelo)
         public async Task<IActionResult> Pedidos()
         {
             var sessionId = HttpContext.Session.Id;
@@ -101,11 +84,8 @@ namespace TiendaDeSnack.Controllers
             return View();
         }
 
-        // ---------------------------------------------------------------------
-        // FUNCIÓN DE CARRITO: Añadir producto (Usa contexto independiente)
-        // ---------------------------------------------------------------------
-
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddToCart([FromBody] CartRequest request)
         {
             if (request.productId == null || request.productId == Guid.Empty)
@@ -142,7 +122,6 @@ namespace TiendaDeSnack.Controllers
                     string nombreItem = isPromo ? promo!.Nombre + " (Promo)" : producto!.Nombre;
 
 
-                    // 3) Buscar y Consolidar
                     cartItem = await dbContext.CarritoItems
                         .FirstOrDefaultAsync(c => c.ProductoId == productoId && c.PromocionId == promocionId && c.SessionId == sessionId);
 
@@ -175,7 +154,6 @@ namespace TiendaDeSnack.Controllers
             }
         }
 
-        // Carga los ítems del carrito para el Offcanvas
         [HttpGet]
         public async Task<IActionResult> GetCartItems()
         {
@@ -210,7 +188,6 @@ namespace TiendaDeSnack.Controllers
             }
         }
 
-        // Función auxiliar para cargar el carrito en el ViewModel
         private async Task<List<CarritoItem>> GetCartItemsForProcessing(string sessionId)
         {
             using (var dbContext = _contextFactory.CreateDbContext())
@@ -223,10 +200,6 @@ namespace TiendaDeSnack.Controllers
             }
         }
 
-        // ---------------------------------------------------------------------
-        // FINALIZAR COMPRA
-        // ---------------------------------------------------------------------
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> FinalizarCompra(FinalizarCompraViewModel model)
@@ -236,8 +209,6 @@ namespace TiendaDeSnack.Controllers
 
             var usuario = HttpContext.Session.GetString("Usuario");
 
-            // 2) Obtener el nombre desde dbo.Clientes con el usuario en sesión (sin tocar el checkout)
-           
             if (!string.IsNullOrWhiteSpace(usuario) && string.IsNullOrWhiteSpace(model.Nombre))
             {
                 using (var lookupDb = _contextFactory.CreateDbContext())
@@ -245,7 +216,6 @@ namespace TiendaDeSnack.Controllers
                     var cliente = await lookupDb.Clientes.AsNoTracking().FirstOrDefaultAsync(c => c.Usuario == usuario);
                     if (cliente != null)
                     {
-                        // Usa Nombre + Apellido_P si existe
                         model.Nombre = string.IsNullOrWhiteSpace(cliente.Apellido_P)
                             ? cliente.Nombre
                             : $"{cliente.Nombre} {cliente.Apellido_P}";
@@ -253,7 +223,6 @@ namespace TiendaDeSnack.Controllers
                 }
             }
 
-            // 3) Validaciones y estado del carrito
             if (!ModelState.IsValid)
             {
                 ViewBag.Error = "Por favor, corrige los errores en los campos de dirección o pago.";
@@ -270,7 +239,7 @@ namespace TiendaDeSnack.Controllers
             {
                 using (var dbContext = _contextFactory.CreateDbContext())
                 {
-                    
+
                     var nuevaVenta = new Venta
                     {
                         Id = Guid.NewGuid(),
@@ -301,15 +270,12 @@ namespace TiendaDeSnack.Controllers
                         dbContext.VentasDetalle.Add(detalle);
                     }
 
-                    // Eliminar items del carrito
-                    // Recomendación: reconsultar dentro del mismo contexto por Ids para evitar tracking cruzado
                     var ids = model.ItemsDelCarrito.Select(i => i.Id).ToList();
                     var itemsToDelete = await dbContext.CarritoItems.Where(c => ids.Contains(c.Id)).ToListAsync();
                     dbContext.CarritoItems.RemoveRange(itemsToDelete);
 
                     await dbContext.SaveChangesAsync();
 
-                    // Limpiar la sesión (opcional)
                     HttpContext.Session.Remove("CartInit");
 
                     var modelConfirm = new FinalizarCompraViewModel
@@ -335,12 +301,11 @@ namespace TiendaDeSnack.Controllers
             }
         }
 
-        // Opcional: Vista de confirmación
         public IActionResult Confirmacion(Guid orderId)
         {
 
             ViewBag.OrderId = orderId;
-            return View(); // Necesitas crear Views/Home/Confirmacion.cshtml
+            return View();
         }
 
         [HttpGet]
@@ -348,11 +313,10 @@ namespace TiendaDeSnack.Controllers
         {
             var usuario = HttpContext.Session.GetString("Usuario");
             if (string.IsNullOrWhiteSpace(usuario))
-                return RedirectToAction("Login"); // Ajusta si tu ruta de login es otra
+                return RedirectToAction("Login");
 
             using (var dbContext = _contextFactory.CreateDbContext())
             {
-                // Filtras por el valor que guardaste en ClienteNombre al crear la venta.
                 var pedidos = await dbContext.Ventas
                     .Where(v => v.ClienteUsuario == usuario)
                     .OrderByDescending(v => v.Fecha)
@@ -377,12 +341,61 @@ namespace TiendaDeSnack.Controllers
 
                 if (venta == null) return NotFound();
 
-                // Seguridad básica: solo dueño o admin
                 var esAdmin = HttpContext.Session.GetString("Rol") == "Admin";
                 if (!esAdmin && venta.ClienteNombre != usuario)
                     return Forbid();
 
                 return View(venta);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> EditarDetallePedido(Guid id)
+        {
+            var rol = HttpContext.Session.GetString("Rol");
+            if (!string.Equals(rol, "Admin", StringComparison.OrdinalIgnoreCase))
+                return Forbid();
+
+            using (var dbContext = _contextFactory.CreateDbContext())
+            {
+                var venta = await dbContext.Ventas
+                    .Include(v => v.Detalles)
+                    .ThenInclude(d => d.Producto)
+                    .FirstOrDefaultAsync(v => v.Id == id);
+
+                if (venta == null) return NotFound();
+
+                return View("DetallePedido", venta);
+            }
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GuardarDetallePedido(Venta model)
+        {
+            var rol = HttpContext.Session.GetString("Rol");
+            if (!string.Equals(rol, "Admin", StringComparison.OrdinalIgnoreCase))
+                return Forbid();
+
+            using (var dbContext = _contextFactory.CreateDbContext())
+            {
+                var ventaExistente = await dbContext.Ventas.FindAsync(model.Id);
+
+                if (ventaExistente == null)
+                {
+                    TempData["Err"] = "Pedido no encontrado para actualizar.";
+                    return RedirectToAction("Panel", new { tab = "Pedidos" });
+                }
+
+                ventaExistente.ClienteNombre = model.ClienteNombre;
+                ventaExistente.CalleNumero = model.CalleNumero;
+                ventaExistente.Ciudad = model.Ciudad;
+                ventaExistente.CodigoPostal = model.CodigoPostal;
+                ventaExistente.Estado = model.Estado;
+
+                await dbContext.SaveChangesAsync();
+                TempData["Ok"] = $"Pedido {model.Id.ToString().Substring(0, 8)}... actualizado con éxito.";
+
+                return RedirectToAction("DetallePedido", new { id = model.Id });
             }
         }
 
@@ -407,16 +420,185 @@ namespace TiendaDeSnack.Controllers
 
                 venta.Estado = estado;
                 await dbContext.SaveChangesAsync();
+                TempData["Ok"] = $"Estado del pedido {id.ToString().Substring(0, 8)}... actualizado a {estado}.";
             }
 
             return RedirectToAction("Panel", new { tab = "Pedidos" });
         }
 
-        // ---------------------------------------------------------------------
-        // FUNCIONES DE INCREMENTO/DECREMENTO CANTIDAD EN CARRITO
-        // ---------------------------------------------------------------------
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarPedido(Guid id)
+        {
+            var rol = HttpContext.Session.GetString("Rol");
+            if (!string.Equals(rol, "Admin", StringComparison.OrdinalIgnoreCase))
+                return Forbid();
+
+            using (var dbContext = _contextFactory.CreateDbContext())
+            {
+                var detalles = await dbContext.VentasDetalle.Where(d => d.VentaId == id).ToListAsync();
+                if (detalles.Any())
+                {
+                    dbContext.VentasDetalle.RemoveRange(detalles);
+                }
+
+                var venta = await dbContext.Ventas.FirstOrDefaultAsync(v => v.Id == id);
+
+                if (venta != null)
+                {
+                    dbContext.Ventas.Remove(venta);
+                }
+                else
+                {
+                    TempData["Err"] = "Pedido no encontrado para eliminar.";
+                    return RedirectToAction("Panel", new { tab = "Pedidos" });
+                }
+
+                await dbContext.SaveChangesAsync();
+                TempData["Ok"] = $"Pedido {id.ToString().Substring(0, 8)}... eliminado con éxito.";
+
+                return RedirectToAction("Panel", new { tab = "Pedidos" });
+            }
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarDetalleItem(Guid detalleId, Guid ventaId)
+        {
+            var rol = HttpContext.Session.GetString("Rol");
+            if (!string.Equals(rol, "Admin", StringComparison.OrdinalIgnoreCase))
+                return Forbid();
+
+            using (var dbContext = _contextFactory.CreateDbContext())
+            {
+                var detalle = await dbContext.VentasDetalle.FindAsync(detalleId);
+                var venta = await dbContext.Ventas.FindAsync(ventaId);
+
+                if (detalle == null || venta == null)
+                    return NotFound();
+
+                venta.Total -= detalle.Subtotal;
+
+                dbContext.VentasDetalle.Remove(detalle);
+                dbContext.Ventas.Update(venta);
+                await dbContext.SaveChangesAsync();
+
+                TempData["Ok"] = "Producto eliminado del pedido y total actualizado.";
+
+                return RedirectToAction("EditarDetallePedido", new { id = ventaId });
+            }
+        }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActualizarDetalleItem(Guid detalleId, Guid ventaId, int nuevaCantidad)
+        {
+            var rol = HttpContext.Session.GetString("Rol");
+            if (!string.Equals(rol, "Admin", StringComparison.OrdinalIgnoreCase))
+                return Forbid();
+
+            if (nuevaCantidad <= 0)
+                return RedirectToAction("EliminarDetalleItem", new { detalleId, ventaId });
+
+            using (var dbContext = _contextFactory.CreateDbContext())
+            {
+                var detalle = await dbContext.VentasDetalle.FindAsync(detalleId);
+                var venta = await dbContext.Ventas.FindAsync(ventaId);
+
+                if (detalle == null || venta == null)
+                    return NotFound();
+
+                decimal subtotalAnterior = detalle.Subtotal;
+
+                detalle.Cantidad = nuevaCantidad;
+                detalle.Subtotal = detalle.PrecioUnitario * nuevaCantidad;
+
+                venta.Total = venta.Total - subtotalAnterior + detalle.Subtotal;
+
+                dbContext.VentasDetalle.Update(detalle);
+                dbContext.Ventas.Update(venta);
+                await dbContext.SaveChangesAsync();
+
+                TempData["Ok"] = $"Cantidad actualizada. Nuevo Total: ${venta.Total.ToString("N2")}";
+
+                return RedirectToAction("EditarDetallePedido", new { id = ventaId });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> EditarEmpleado(Guid id)
+        {
+            var rol = HttpContext.Session.GetString("Rol");
+            if (!string.Equals(rol, "Admin", StringComparison.OrdinalIgnoreCase))
+                return Forbid();
+
+            var empleado = await _db.Empleados.FindAsync(id);
+
+            if (empleado == null) return NotFound();
+
+            return View(empleado); 
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GuardarEmpleado(Empleado model)
+        {
+            var rol = HttpContext.Session.GetString("Rol");
+            if (!string.Equals(rol, "Admin", StringComparison.OrdinalIgnoreCase))
+                return Forbid();
+
+            if (!ModelState.IsValid)
+            {
+                TempData["Err"] = "Error de validación al guardar empleado.";
+                return View("EditarEmpleado", model);
+            }
+
+            var empleadoExistente = await _db.Empleados.FindAsync(model.Id);
+
+            if (empleadoExistente == null)
+            {
+                TempData["Err"] = "Empleado no encontrado.";
+                return RedirectToAction("Panel", new { tab = "Empleados" });
+            }
+
+            empleadoExistente.Nombre = model.Nombre;
+            empleadoExistente.Apellido_P = model.Apellido_P;
+            empleadoExistente.Usuario = model.Usuario;
+            empleadoExistente.Contraseña = model.Contraseña;
+            empleadoExistente.TipoUsuario = model.TipoUsuario;
+
+            await _db.SaveChangesAsync();
+            TempData["Ok"] = $"Empleado {model.Nombre} actualizado con éxito.";
+
+            return RedirectToAction("Panel", new { tab = "Empleados" });
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarEmpleado(Guid id)
+        {
+            var rol = HttpContext.Session.GetString("Rol");
+            if (!string.Equals(rol, "Admin", StringComparison.OrdinalIgnoreCase))
+                return Forbid();
+
+            var empleado = await _db.Empleados.FindAsync(id);
+
+            if (empleado != null)
+            {
+                _db.Empleados.Remove(empleado);
+                await _db.SaveChangesAsync();
+                TempData["Ok"] = $"Empleado {empleado.Nombre} eliminado con éxito.";
+            }
+            else
+            {
+                TempData["Err"] = "Empleado no encontrado.";
+            }
+
+            return RedirectToAction("Panel", new { tab = "Empleados" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> IncrementCartItem([FromBody] CartItemChangeRequest request)
         {
             if (request?.itemId == null || request.itemId == Guid.Empty)
@@ -452,6 +634,7 @@ namespace TiendaDeSnack.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> DecrementCartItem([FromBody] CartItemChangeRequest request)
         {
             if (request?.itemId == null || request.itemId == Guid.Empty)
@@ -494,14 +677,11 @@ namespace TiendaDeSnack.Controllers
             }
         }
 
-        // ---------------------------------------------------------------------
-        // MÉTODOS DE AUTENTICACIÓN Y ADMINISTRACIÓN
-        // ---------------------------------------------------------------------
-
         [HttpGet]
         public IActionResult RegistroEmpleado() => View();
         [HttpGet]
         public IActionResult Registro() => View();
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -556,7 +736,6 @@ namespace TiendaDeSnack.Controllers
                 _db.Clientes.Add(cliente);
                 await _db.SaveChangesAsync();
 
-                //inicia sesion con el cliente recien registrado
                 HttpContext.Session.SetString("Usuario", cliente.Usuario ?? cliente.Nombre);
                 HttpContext.Session.SetString("Rol", "Cliente");
 
@@ -585,13 +764,11 @@ namespace TiendaDeSnack.Controllers
 
             var errores = new List<string>();
 
-            //verificar si todos los campos estan completos
             if (string.IsNullOrWhiteSpace(nombre)) errores.Add("El Nombre es obligatorio.");
             if (string.IsNullOrWhiteSpace(apellido)) errores.Add("El Apellido es obligatorio.");
             if (string.IsNullOrWhiteSpace(usuario)) errores.Add("El Usuario es obligatorio.");
             if (string.IsNullOrWhiteSpace(password)) errores.Add("La contraseña es obligatoria.");
 
-            //Caracteres validos
             if (!string.IsNullOrWhiteSpace(nombre) && !nombreRegex.IsMatch(nombre))
                 errores.Add("El Nombre contiene caracteres no válidos.");
             if (!string.IsNullOrWhiteSpace(apellido) && !nombreRegex.IsMatch(apellido))
@@ -607,7 +784,6 @@ namespace TiendaDeSnack.Controllers
             }
 
 
-            //Valida si no hay el usuario no existe
             var usuarioOcupado =
                 await _db.Clientes.AsNoTracking().AnyAsync(c => c.Usuario == usuario) ||
                 await _db.Empleados.AsNoTracking().AnyAsync(e => e.Usuario == usuario);
@@ -641,7 +817,7 @@ namespace TiendaDeSnack.Controllers
                 ViewBag.Error = "Ocurrió un error guardando el usuario. Inténtalo de nuevo.";
                 return View();
             }
-           
+
         }
 
 
@@ -658,18 +834,24 @@ namespace TiendaDeSnack.Controllers
             tab = string.IsNullOrWhiteSpace(tab) ? "Productos" : tab;
             ViewBag.Tab = tab;
 
-            if (string.Equals(tab, "Pedidos", StringComparison.OrdinalIgnoreCase))
+            using (var dbContext = _contextFactory.CreateDbContext())
             {
-                using (var dbContext = _contextFactory.CreateDbContext())
+                if (string.Equals(tab, "Pedidos", StringComparison.OrdinalIgnoreCase))
                 {
                     var pedidos = dbContext.Ventas
                         .OrderByDescending(v => v.Fecha)
                         .ToList();
 
                     ViewBag.Pedidos = pedidos;
-
                 }
-                    
+                else if (string.Equals(tab, "Empleados", StringComparison.OrdinalIgnoreCase))
+                {
+                    var empleados = dbContext.Empleados
+                        .OrderBy(e => e.Nombre)
+                        .ToList();
+
+                    ViewBag.Empleados = empleados;
+                }
             }
             return View("Panel");
         }
@@ -727,12 +909,6 @@ namespace TiendaDeSnack.Controllers
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
 
-        // ---------------------------------------------------------------------
-        // NUEVAS ACCIONES Y VISTAS
-        // ---------------------------------------------------------------------
-
-        // Acción para mostrar el formulario de checkout (usada antes por el menú)
-        [HttpGet]
         public async Task<IActionResult> Checkout()
         {
             var sessionId = HttpContext.Session.Id;
@@ -753,13 +929,9 @@ namespace TiendaDeSnack.Controllers
                     TotalPagar = cartItems.Sum(i => i.PrecioUnitario * i.Cantidad)
                 };
 
-                return View("Pedidos", vm); // Reutilizamos la vista Pedidos como formulario de checkout
+                return View("Pedidos", vm);
             }
         }
-
-        // ---------------------------------------------------------------------
-        // CLASES AUXILIARES NECESARIAS PARA AJAX
-        // ---------------------------------------------------------------------
 
         public class CartRequest
         {

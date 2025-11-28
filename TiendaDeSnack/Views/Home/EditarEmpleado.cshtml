@@ -1,0 +1,69 @@
+﻿@model TiendaDeSnack.Models.Empleado
+@using TiendaDeSnack.Models
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Editar Empleado";
+}
+
+<div class="container py-5">
+    <h1 class="text-center" style="color: #FFD700;">EDITAR EMPLEADO</h1>
+
+    <div style="display: flex; justify-content: center; margin-top: 40px;">
+        <div style="background-color: #000; border: 2px solid #FFD700; border-radius: 10px; padding: 40px; width: 400px; text-align: center;">
+
+            @if (TempData["Err"] != null)
+            {
+                <div class="alert alert-danger" role="alert">@TempData["Err"]</div>
+            }
+            @if (TempData["Ok"] != null)
+            {
+                <div class="alert alert-success" role="alert">@TempData["Ok"]</div>
+            }
+
+            <form asp-action="GuardarEmpleado" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+
+                <div class="mb-3 text-start">
+                    <label asp-for="Nombre" style="color: #FFD700; font-weight: 600;">NOMBRE</label>
+                    <input asp-for="Nombre" class="form-control mt-1" style="background-color: #fff; color: #000;">
+                    <span asp-validation-for="Nombre" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3 text-start">
+                    <label asp-for="Apellido_P" style="color: #FFD700; font-weight: 600;">APELLIDO</label>
+                    <input asp-for="Apellido_P" class="form-control mt-1" style="background-color: #fff; color: #000;">
+                    <span asp-validation-for="Apellido_P" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3 text-start">
+                    <label asp-for="Usuario" style="color: #FFD700; font-weight: 600;">USUARIO</label>
+                    <input asp-for="Usuario" class="form-control mt-1" style="background-color: #fff; color: #000;">
+                    <span asp-validation-for="Usuario" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3 text-start">
+                    <label asp-for="Contraseña" style="color: #FFD700; font-weight: 600;">CONTRASEÑA</label>
+                    <input type="password" asp-for="Contraseña" class="form-control mt-1" style="background-color: #fff; color: #000;">
+                    <span asp-validation-for="Contraseña" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3 text-start">
+                    <label asp-for="TipoUsuario" style="color: #FFD700; font-weight: 600;">TIPO DE EMPLEADO</label>
+                    <select asp-for="TipoUsuario" class="form-select mt-1" style="background-color: #fff; color: #000;" required>
+                        <option value="Admin">Admin</option>
+                        <option value="Empleado">Empleado</option>
+                        <option value="Repartidor">Repartidor</option>
+                    </select>
+                    <span asp-validation-for="TipoUsuario" class="text-danger"></span>
+                </div>
+
+                <button type="submit" class="btn btn-warning w-100 fw-bold" style="color: #000;">Guardar Cambios</button>
+                <a asp-action="Panel" asp-route-tab="Empleados" class="btn btn-secondary w-100 mt-2">Cancelar</a>
+
+            </form>
+        </div>
+    </div>
+</div>
