@@ -72,7 +72,20 @@ namespace TiendaDeSnack.Controllers
                                   .OrderByDescending(p => p.Activo)
                                   .ThenBy(p => p.Nombre)
                                   .ToListAsync();
+
+            // --- CÓDIGO AÑADIDO: CARGAR VENTAS Y CALCULAR TOTAL GENERAL ---
+            var pedidos = await _db.Ventas
+                                   .AsNoTracking()
+                                   .OrderByDescending(v => v.Fecha)
+                                   .ToListAsync();
+
+            // Calcular el Total General de Ventas (la suma de todos los totales individuales)
+            var totalVentasGeneral = pedidos.Sum(v => v.Total);
+
             ViewBag.Promos = promos;
+            ViewBag.Pedidos = pedidos; // Lista de ventas para la vista
+            ViewBag.TotalVentasGeneral = totalVentasGeneral; // Total sumado para la vista
+            // --- FIN CÓDIGO AÑADIDO ---
 
             return View("~/Views/Home/AdminProductos.cshtml", productos);
         }
@@ -119,6 +132,13 @@ namespace TiendaDeSnack.Controllers
             var prod = await _db.Productos.FindAsync(id);
             if (prod != null)
             {
+                // --- CÓDIGO DE PROTECCIÓN: No se puede eliminar si está activo ---
+                if (prod.Activo)
+                {
+                    TempData["Err"] = $"No se puede eliminar el producto '{prod.Nombre}' porque está activo. Por favor, desactívalo primero.";
+                    return RedirectToAction("Index");
+                }
+
                 _db.Productos.Remove(prod);
                 await _db.SaveChangesAsync();
                 TempData["Ok"] = $"Se eliminó el producto: {prod.Nombre}";
