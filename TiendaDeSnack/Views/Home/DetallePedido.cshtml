@@ -1,139 +1,102 @@
 ﻿@model TiendaDeSnack.Models.Venta
-@using System.Linq
-@using TiendaDeSnack.Models
+@using Microsoft.AspNetCore.Http
 @using Microsoft.AspNetCore.Mvc.TagHelpers
-
-@* Las directivas de uso son esenciales para evitar errores de compilación *@
+@using TiendaDeSnack.Models
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
-@using Microsoft.AspNetCore.Mvc.Rendering @* Referencia adicional para máxima compatibilidad *@
 
 @{
     ViewData["Title"] = "Detalle Pedido";
-    // Detecta si la acción actual es EditarDetallePedido para cambiar a modo formulario.
-    bool isEditing = (ViewContext.RouteData.Values["action"] as string) == "EditarDetallePedido";
+
+    // Obtenemos el rol desde la sesión
+    var rol = Context.Session.GetString("Rol");
+    bool esAdmin = !string.IsNullOrEmpty(rol) && rol.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+
+    // Solo activamos modo edición si es Admin Y la acción es Editar
+    bool isEditing = (ViewContext.RouteData.Values["action"] as string) == "EditarDetallePedido" && esAdmin;
 }
 
 <div class="container py-5">
     <h1 class="mb-4">Pedido #@Model.Id.ToString().Substring(0, 8)...</h1>
 
-    @* INICIO: BLOQUE DE EDICIÓN (Con formularios y campos de entrada) *@
+    @* --- MODO EDICIÓN (SOLO ADMIN) --- *@
     @if (isEditing)
     {
         <form asp-action="GuardarDetallePedido" method="post">
-            @Html.AntiForgeryToken()
-            <input type="hidden" asp-for="Id" />
+            @Html.AntiForgeryToken() <input type="hidden" asp-for="Id" />
 
-            <p><strong>Fecha:</strong> @Model.Fecha.ToLocalTime()</p>
+            <div class="card p-4 border-warning mb-4">
+                <h4 class="text-warning">Editando Información</h4>
+                <div class="mb-2"><label>Nombre:</label> <input asp-for="ClienteNombre" class="form-control" /></div>
+                <div class="mb-2"><label>Dirección:</label> <input asp-for="CalleNumero" class="form-control" /></div>
+                <div class="row mb-2">
+                    <div class="col"><input asp-for="Ciudad" class="form-control" placeholder="Ciudad" /></div>
+                    <div class="col"><input asp-for="CodigoPostal" class="form-control" placeholder="CP" /></div>
+                </div>
+                <div class="mb-2">
+                    <label>Estado:</label>
+                    <select asp-for="Estado" class="form-select">
+                        <option>Preparando</option>
+                        <option>Enviado</option>
+                        <option>Entregado</option>
+                        <option>Cancelado</option>
+                        <option>Completada</option>
+                    </select>
+                </div>
+            </div>
 
-            <h4 class="mt-4">Datos del Cliente y Envío</h4>
-            <p>
-                <strong>Nombre:</strong>
-                <input asp-for="ClienteNombre" class="form-control d-inline w-50" />
-            </p>
-
-            <p>
-                <strong>Dirección:</strong>
-                <input asp-for="CalleNumero" class="form-control d-inline w-75 mb-2" />
-                <br />
-                <label>Ciudad:</label> <input asp-for="Ciudad" class="form-control d-inline w-50" />
-                <label class="ms-3">C.P.:</label> <input asp-for="CodigoPostal" class="form-control d-inline w-25" />
-            </p>
-
-            <h4 class="mt-4">Estado y Pago</h4>
-            <p>
-                <strong>Estado:</strong>
-                <select asp-for="Estado" class="form-select d-inline w-auto">
-                    <option>Preparando</option>
-                    <option>Enviado</option>
-                    <option>Entregado</option>
-                    <option>Cancelado</option>
-                    <option>Completada</option>
-                </select>
-            </p>
-            <p><strong>Total:</strong> $@Model.Total.ToString("N2")</p>
-            <p><strong>Método de Pago:</strong> @Model.MetodoPago</p>
-
-            <h4 class="mt-4">Ítems del Pedido</h4>
+            <h4 class="mt-4">Ítems (Inventario)</h4>
             <table class="table">
-                <thead>
-                    <tr>
-                        <th>Producto</th>
-                        <th>Cant.</th>
-                        <th>Precio Unit.</th>
-                        <th>Subtotal</th>
-                        <th>Acción</th> @* La columna de acción siempre está en este bloque *@
-                    </tr>
-                </thead>
+                <thead><tr><th>Prod</th><th>Cant</th><th>Subtotal</th><th>Acción</th></tr></thead>
                 <tbody>
                     @foreach (var d in Model.Detalles)
                     {
                         <tr>
                             <td>@d.Producto?.Nombre</td>
-
-                            @* Formulario para actualizar cantidad (item por item) *@
                             <td>
-                                <form asp-action="ActualizarDetalleItem" method="post" class="d-flex align-items-center">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="detalleId" value="@d.Id" />
-                                    <input type="hidden" name="ventaId" value="@Model.Id" />
-                                    <input type="number" name="nuevaCantidad" value="@d.Cantidad" min="1" class="form-control form-control-sm w-50 me-2" required style="width: 70px;" />
-                                    <button type="submit" class="btn btn-sm btn-secondary">OK</button>
-                                </form>
+                                @* Formulario pequeño para actualizar cantidad *@
+                                <div class="input-group input-group-sm" style="width: 120px;">
+                                    <input form="form-qty-@d.Id" type="number" name="nuevaCantidad" value="@d.Cantidad" min="1" class="form-control" />
+                                    <button form="form-qty-@d.Id" class="btn btn-secondary">Ok</button>
+                                </div>
                             </td>
-
-                            <td>$@d.PrecioUnitario.ToString("N2")</td>
                             <td>$@d.Subtotal.ToString("N2")</td>
-
                             <td>
-                                <form asp-action="EliminarDetalleItem" method="post" onsubmit="return confirm('¿Eliminar item del pedido y recalcular total?');">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="detalleId" value="@d.Id" />
-                                    <input type="hidden" name="ventaId" value="@Model.Id" />
-                                    <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
-                                </form>
+                                <button form="form-del-@d.Id" class="btn btn-sm btn-danger">X</button>
                             </td>
                         </tr>
                     }
                 </tbody>
             </table>
 
-            <div class="mt-4">
-                <button type="submit" class="btn btn-success">Guardar Cambios</button> @* Botón para guardar metadata (nombre, dirección, etc.) *@
-                <a asp-action="DetallePedido" asp-route-id="@Model.Id" class="btn btn-secondary">Cancelar Edición</a>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-success fw-bold">Guardar Cambios Generales</button>
+                <a asp-action="DetallePedido" asp-route-id="@Model.Id" class="btn btn-secondary">Cancelar</a>
             </div>
         </form>
-    }
-    @* FIN: BLOQUE DE EDICIÓN *@
 
-    @* INICIO: BLOQUE DE SOLO LECTURA (Si isEditing es false) *@
+        @* Formularios auxiliares ocultos para evitar anidamiento *@
+        @foreach (var d in Model.Detalles)
+        {
+            <form id="form-qty-@d.Id" asp-action="ActualizarDetalleItem" method="post" style="display:none;">
+                @Html.AntiForgeryToken() <input type="hidden" name="detalleId" value="@d.Id" /><input type="hidden" name="ventaId" value="@Model.Id" />
+            </form>
+            <form id="form-del-@d.Id" asp-action="EliminarDetalleItem" method="post" onsubmit="return confirm('¿Eliminar?');" style="display:none;">
+                @Html.AntiForgeryToken() <input type="hidden" name="detalleId" value="@d.Id" /><input type="hidden" name="ventaId" value="@Model.Id" />
+            </form>
+        }
+    }
     else
     {
+        @* --- MODO LECTURA (CLIENTE Y ADMIN) --- *@
         <p><strong>Fecha:</strong> @Model.Fecha.ToLocalTime()</p>
-
-        <h4 class="mt-4">Datos del Cliente y Envío</h4>
-        <p>
-            <strong>Nombre:</strong>
-            @Model.ClienteNombre
-        </p>
-
-        <p>
-            <strong>Dirección:</strong>
-            @Model.CalleNumero, @Model.Ciudad, C.P. @Model.CodigoPostal
-        </p>
-
-        <h4 class="mt-4">Estado y Pago</h4>
-        <p>
-            <strong>Estado:</strong>
-            @Model.Estado
-        </p>
+        <p><strong>Cliente:</strong> @Model.ClienteNombre</p>
+        <p><strong>Dirección:</strong> @Model.CalleNumero, @Model.Ciudad</p>
+        <p><strong>Estado:</strong> <span class="badge bg-warning text-dark">@Model.Estado</span></p>
         <p><strong>Total:</strong> $@Model.Total.ToString("N2")</p>
-        <p><strong>Método de Pago:</strong> @Model.MetodoPago</p>
 
-        <h4 class="mt-4">Ítems del Pedido (Solo lectura)</h4>
-        <table class="table">
-            <thead>
-                <tr><th>Producto</th><th>Cant.</th><th>Precio Unit.</th><th>Subtotal</th></tr>
-            </thead>
+        <h4 class="mt-4">Ítems</h4>
+        <table class="table table-striped">
+            <thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th></tr></thead>
             <tbody>
                 @foreach (var d in Model.Detalles)
                 {
@@ -148,8 +111,17 @@
         </table>
 
         <div class="mt-4">
-            <a asp-action="EditarDetallePedido" asp-route-id="@Model.Id" class="btn btn-warning">Editar Pedido</a>
-            <a asp-action="Panel" asp-route-tab="Pedidos" class="btn btn-secondary">Volver al Panel</a>
+            @if (esAdmin)
+            {
+                @* SOLO EL ADMIN VE ESTE BOTÓN *@
+                <a asp-action="EditarDetallePedido" asp-route-id="@Model.Id" class="btn btn-warning">Editar Pedido</a>
+                <a asp-action="Panel" asp-route-tab="Pedidos" class="btn btn-secondary">Volver al Panel</a>
+            }
+            else
+            {
+                @* EL CLIENTE SOLO VE ESTE *@
+                <a asp-action="MisPedidos" class="btn btn-secondary">Volver a Mis Pedidos</a>
+            }
         </div>
     }
 </div>
