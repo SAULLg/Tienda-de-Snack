@@ -67,7 +67,12 @@
                 <div class="card p-3 mb-4" id="tarjeta-campos" style="display:none;">
                     <div class="mb-3">
                         <label asp-for="NumeroTarjeta" class="form-label"></label>
-                        <input asp-for="NumeroTarjeta" class="form-control" placeholder="1234 5678 9012 3456" />
+                        <input asp-for="NumeroTarjeta"
+                               class="form-control"
+                               placeholder="1234 5678 9012 3456"
+                               inputmode="numeric"
+                               autocomplete="cc-number"
+                               maxlength="23" />
                         <span asp-validation-for="NumeroTarjeta" class="text-danger"></span>
                     </div>
                     <div class="mb-3 w-50">
@@ -156,6 +161,55 @@
             metodoPagoRadios.forEach(radio => radio.addEventListener('change', toggleTarjetaFields));
 
             // Usar setTimeout para asegurar que se ejecuta DESPUÉS de que Razor actualiza los campos
+            setTimeout(toggleTarjetaFields, 50);
+        });
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const metodoPagoRadios = document.querySelectorAll('input[name="MetodoPago"]');
+            const tarjetaCampos = document.getElementById('tarjeta-campos');
+            const form = document.querySelector('form[asp-action="FinalizarCompra"]');
+            const inputTarjeta = document.querySelector('input[name="NumeroTarjeta"]');
+
+            function toggleTarjetaFields() {
+                const isTarjeta = document.querySelector('input[name="MetodoPago"]:checked')?.value === 'Tarjeta';
+                tarjetaCampos.style.display = isTarjeta ? 'block' : 'none';
+
+                const requiredFields = tarjetaCampos.querySelectorAll('input');
+                requiredFields.forEach(input => {
+                    if (isTarjeta) {
+                        input.setAttribute('required', '');
+                    } else {
+                        input.removeAttribute('required');
+                    }
+                });
+            }
+
+            // Formatea con espacios cada 4 dígitos
+            function formatCardNumber(value) {
+                const digits = value.replace(/\D/g, '').slice(0, 19);
+                return digits.replace(/(.{4})/g, '$1 ').trim();
+            }
+
+            if (inputTarjeta) {
+                inputTarjeta.addEventListener('input', (e) => {
+                    const caret = e.target.selectionStart;
+                    const oldVal = e.target.value;
+                    e.target.value = formatCardNumber(oldVal);
+                });
+            }
+
+            // Antes de enviar, quita espacios/guiones para evitar errores
+            if (form) {
+                form.addEventListener('submit', () => {
+                    if (inputTarjeta) {
+                        inputTarjeta.value = (inputTarjeta.value || '').replace(/\D/g, '');
+                    }
+                });
+            }
+
+            metodoPagoRadios.forEach(radio => radio.addEventListener('change', toggleTarjetaFields));
             setTimeout(toggleTarjetaFields, 50);
         });
     </script>

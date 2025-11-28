@@ -2,11 +2,17 @@
 
 @{
     ViewData["Title"] = "Nuestro Menú";
+    var q = ViewBag.Query as string;
 }
 
 <div class="menu-page-container">
     <h1 class="text-center menu-title">Nuestro Menú</h1>
     <p class="text-center menu-subtitle">¡Descubre nuestras deliciosas opciones!</p>
+
+    @if (!string.IsNullOrWhiteSpace(q))
+    {
+        <p class="text-center text-muted">Resultados para "<strong>@q</strong>"</p>
+    }
 
     <!-- ================== PRODUCTOS ================== -->
     @if (Model.Productos != null && Model.Productos.Any())
@@ -30,6 +36,13 @@
                     <p class="product-price">@producto.Precio.ToString("N2")</p>
                 </div>
             }
+        </div>
+    }
+    else
+    {
+        <div class="text-center mt-4">
+            <p class="text-muted">No se encontraron productos que coincidan con tu búsqueda.</p>
+            <a class="btn btn-warning" href="@Url.Action("Menu", "Home")">Ver todo el menú</a>
         </div>
     }
 

@@ -100,11 +100,19 @@
                     </ul>
 
                     <div class="right-nav-icons-group d-flex align-items-center">
-                        <div class="search-bar-container">
-                            <input type="text" class="search-input" placeholder="Buscar..." />
-                            <button type="button" class="search-button">
+                        <form method="get"
+                              asp-controller="Home"
+                              asp-action="Menu"
+                              class="search-bar-container d-flex align-items-center">
+                            <input type="text"
+                                   class="search-input"
+                                   name="q"
+                                   placeholder="Buscar..."
+                                   value="@(Context?.Request?.Query["q"].ToString())" />
+                            <button type="submit" class="search-button">
                                 <i class="fas fa-search"></i>
                             </button>
+                        </form>
                         </div>
 
                         @* Render cart and profile icons except on Resenas page *@

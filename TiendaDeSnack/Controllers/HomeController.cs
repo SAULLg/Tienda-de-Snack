@@ -39,13 +39,24 @@ namespace TiendaDeSnack.Controllers
         }
 
         // Carga los productos de la base de datos para la vista de menú
-        public async Task<IActionResult> Menu()
+        public async Task<IActionResult> Menu(string? q)
         {
+
             using (var dbContext = _contextFactory.CreateDbContext())
             {
-                var productos = await dbContext.Productos
-                    .Where(p => p.Activo)
-                    .ToListAsync();
+                var productosQuery = dbContext.Productos
+                    .Where(p => p.Activo);
+
+                if (!string.IsNullOrWhiteSpace(q))
+                {
+                    var qNorm = q.Trim().ToLower();
+                    productosQuery = productosQuery.Where(p =>
+                        p.Nombre.ToLower().Contains(qNorm) ||
+                        (p.Descripcion != null && p.Descripcion.ToLower().Contains(qNorm))
+                    );
+                }
+
+                var productos = await productosQuery.ToListAsync();
 
                 var promociones = await dbContext.Promociones
                     .Where(p => p.Activo)
@@ -57,6 +68,7 @@ namespace TiendaDeSnack.Controllers
                     Promociones = promociones
                 };
 
+                ViewBag.Query = q;
                 return View(viewModel);
             }
         }
